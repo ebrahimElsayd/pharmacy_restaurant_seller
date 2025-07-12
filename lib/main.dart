@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:pharmacy_restaurant_seller/features/add_product/presentation/screens/add_product.dart';
+
+import 'core/functions/navigate.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,6 +35,11 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          NavigateFN(context, () => AddProduct());
+        },
+      ),
       appBar: AppBar(
         title: Text(
           'Responsive UI',
@@ -43,7 +51,6 @@ class HomeScreen extends StatelessWidget {
           width: 200.w,
           // العرض يتناسب مع الشاشة
           height: 100.h,
-          // الطول يتناسب مع الشاشة
           color: Colors.amber,
           alignment: Alignment.center,
           child: Text('Hello!', style: TextStyle(fontSize: 24.sp)),
