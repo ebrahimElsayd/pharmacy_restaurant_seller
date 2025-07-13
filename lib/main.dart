@@ -36,6 +36,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
+         child: Icon(Icons.add),
         onPressed: () {
           NavigateFN(context, () => AddProduct());
         },
