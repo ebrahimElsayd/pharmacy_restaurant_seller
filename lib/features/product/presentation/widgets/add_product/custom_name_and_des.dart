@@ -6,8 +6,9 @@ import 'custom_row_title.dart';
 import 'custom_text_filed.dart';
 
 class CustomNameAndDes extends StatelessWidget {
-  const CustomNameAndDes({super.key});
-
+  const CustomNameAndDes({super.key, required this.title, required this.description, });
+final TextEditingController title ;
+final TextEditingController description;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -26,11 +27,11 @@ class CustomNameAndDes extends StatelessWidget {
             SizedBox(height: 20),
             CustomRowTitle(text: 'Product title'),
             SizedBox(height: 10),
-            CustomTextFiled(paddingVertical: 15, hint: 'Input your text'),
+            CustomTextFiled(paddingVertical: 15, hint: 'Input your text', controller:title ,),
             SizedBox(height: 20),
             CustomRowTitle(text: 'Description'),
             SizedBox(height: 10),
-            CustomTextFiled(paddingVertical: 40),
+            CustomTextFiled(paddingVertical: 40, controller: description,),
           ],
         ),
       ),

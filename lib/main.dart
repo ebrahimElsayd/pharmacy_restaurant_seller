@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/add_product.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/functions/navigate.dart';
 
-void main() {
+void main()async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: "https://auxddiylonbgayfcgcit.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1eGRkaXlsb25iZ2F5ZmNnY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTk4MzEsImV4cCI6MjA2NzgzNTgzMX0.jFsEvMNT-jtg_uS0HYTfHKhOzhH-4ZeiEicDqEsicA8",
+  );
   runApp(const MyApp());
 }
 
