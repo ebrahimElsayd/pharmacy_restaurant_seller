@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/add_product.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+import 'core/functions/navigate.dart';
+
+void main()async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: "https://auxddiylonbgayfcgcit.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1eGRkaXlsb25iZ2F5ZmNnY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTk4MzEsImV4cCI6MjA2NzgzNTgzMX0.jFsEvMNT-jtg_uS0HYTfHKhOzhH-4ZeiEicDqEsicA8",
+  );
   runApp(const MyApp());
 }
 
@@ -32,6 +41,12 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+         child: Icon(Icons.add),
+        onPressed: () {
+          NavigateFN(context, () => AddProduct());
+        },
+      ),
       appBar: AppBar(
         title: Text(
           'Responsive UI',
@@ -43,7 +58,6 @@ class HomeScreen extends StatelessWidget {
           width: 200.w,
           // العرض يتناسب مع الشاشة
           height: 100.h,
-          // الطول يتناسب مع الشاشة
           color: Colors.amber,
           alignment: Alignment.center,
           child: Text('Hello!', style: TextStyle(fontSize: 24.sp)),
