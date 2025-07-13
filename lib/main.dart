@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:pharmacy_restaurant_seller/features/add_product/presentation/screens/add_product.dart';
+import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/add_product.dart';
 
 import 'core/functions/navigate.dart';
 

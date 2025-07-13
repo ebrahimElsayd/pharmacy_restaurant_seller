@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pharmacy_restaurant_seller/core/theme/app_pallete.dart';
 
 class CustomTextFiled extends StatelessWidget {
   const CustomTextFiled({super.key, required this.paddingVertical, this.hint});
@@ -18,14 +19,14 @@ class CustomTextFiled extends StatelessWidget {
         hintText: hint ?? "",
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey),
+          borderSide: BorderSide(color: AppPallete.lightGrey),
         ),
         disabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey),
+          borderSide: BorderSide(color: AppPallete.lightGrey),
           borderRadius: BorderRadius.circular(16),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey),
+          borderSide: BorderSide(color: AppPallete.lightGrey),
           borderRadius: BorderRadius.circular(16),
         ),
       ),

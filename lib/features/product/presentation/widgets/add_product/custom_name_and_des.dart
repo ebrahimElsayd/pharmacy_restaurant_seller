@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pharmacy_restaurant_seller/core/theme/app_pallete.dart';
 
 import '../../../../../core/theme/text_style.dart';
 import 'custom_row_title.dart';
@@ -13,7 +14,7 @@ class CustomNameAndDes extends StatelessWidget {
       height: 350,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppPallete.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
