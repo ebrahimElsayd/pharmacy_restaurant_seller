@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-void main() {
-  runApp(const MyApp());
+import 'features/auth/presentation/screens/signup_screen.dart';
+
+void main() async {
+  // WidgetsFlutterBinding.ensureInitialized();
+  // await Supabase.initialize(
+  //   url: 'YOUR_SUPABASE_URL',
+  //   anonKey: 'YOUR_SUPABASE_ANON_KEY',
+  // );
+
+  runApp(
+    // const ProviderScope(
+    // child:
+    MyApp(),
+    // ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -19,7 +32,7 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'ScreenUtil Demo',
           theme: ThemeData(primarySwatch: Colors.blue),
-          home: const HomeScreen(),
+          home: const SignUpScreen(),
         );
       },
     );
