@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/utils/show_snack_bar.dart';
-import '../../riverpods/add_product_river_pod/add_product_river_pod.dart';
+import '../../riverpods/product_river_pod/add_product_river_pod.dart';
+import '../../riverpods/product_river_pod/show_product_river_pod.dart';
 import 'custom_button_push.dart';
 import 'custom_drop_image.dart';
 import 'custom_name_and_des.dart';
@@ -32,7 +33,8 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
 
     if (title.text.trim().isEmpty ||
         description.text.trim().isEmpty ||
-        amount.text.trim().isEmpty) {
+        amount.text.trim().isEmpty ||
+        state.category == null) {
       showSnackBar(context, 'All fields are required');
       return;
     }
@@ -40,15 +42,21 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
     ref.read(addProductProvider.notifier).setLoading(true);
 
     try {
-      await _supabase.from('product').insert({
+      await _supabase.from('products').insert({
         "title": title.text.trim(),
         "description": description.text.trim(),
-        "price": int.tryParse(amount.text.trim()) ?? 0,
-        "dis_price": int.tryParse(disAmount.text.trim()) ?? 0,
         "image": state.imageUrl,
+        "category": state.category,
+        "amount": double.tryParse(amount.text.trim()) ?? 0.0,
+        "discount_amount": double.tryParse(disAmount.text.trim()) ?? 0.0,
+        "status": "Available",
+        "views": 0,
+        "likes": 0,
+        "created_at": DateTime.now().toUtc().toIso8601String(),
       });
 
       showSnackBar(context, 'Done');
+      ref.invalidate(productsProvider);
       Navigator.pop(context);
     } catch (error) {
       showSnackBar(context, 'Not Done: $error');
@@ -56,6 +64,7 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
       ref.read(addProductProvider.notifier).setLoading(false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +76,8 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
         child: Column(
           children: [
             CustomNameAndDes(title: title, description: description),
+            const SizedBox(height: 15),
+
             const SizedBox(height: 15),
             CustomDropImage(
               onImageUploaded: (url) {

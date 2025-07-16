@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class AppPallete {
   static const Color lightGreyForText = Color(0xFF878787);
   static const Color blackForText = Colors.black;
+  static const Color green = Colors.green;
+  static const Color red = Colors.red;
   static const Color lightBlueForText = Color(0xFF004CFF);
   static const Color darkGreyForText = Color(0xFF878787);
   static const Color binkForText = Color(0xFFF83758);

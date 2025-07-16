@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/add_product.dart';
+import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/show_product.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/functions/navigate.dart';
@@ -42,12 +43,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-         child: Icon(Icons.add),
-        onPressed: () {
-          NavigateFN(context, () => AddProduct());
-        },
-      ),
+
       appBar: AppBar(
         title: Text(
           'Responsive UI',
@@ -55,13 +51,19 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       body: Center(
-        child: Container(
-          width: 200.w,
-          // العرض يتناسب مع الشاشة
-          height: 100.h,
-          color: Colors.amber,
-          alignment: Alignment.center,
-          child: Text('Hello!', style: TextStyle(fontSize: 24.sp)),
+        child: GestureDetector(
+          onTap: (){
+            NavigateFN(context, () => ShowProduct());
+
+          },
+          child: Container(
+            width: 200.w,
+            // العرض يتناسب مع الشاشة
+            height: 100.h,
+            color: Colors.amber,
+            alignment: Alignment.center,
+            child: Text('Product!', style: TextStyle(fontSize: 24.sp)),
+          ),
         ),
       ),
     );
