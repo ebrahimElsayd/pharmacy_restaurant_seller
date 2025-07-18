@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pharmacy_restaurant_seller/features/product/data/model/product_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../../core/functions/navigate.dart';
 import '../../../../../core/theme/app_pallete.dart';
 import '../../riverpods/product_river_pod/show_product_river_pod.dart';
+import '../../screens/edit_product.dart';
+
 
 Future<void> deleteProductAndImage({
   required int productId,
@@ -35,9 +38,10 @@ class ProductOptions extends ConsumerWidget {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert),
       itemBuilder: (BuildContext context) => [
-        const PopupMenuItem<String>(
+         PopupMenuItem<String>(
           value: 'edit',
           child: ListTile(
+             onTap: (){    NavigateFN(context, () => EditProduct());},
             leading: Icon(Icons.edit, size: 20),
             title: Text('Edit product'),
           ),

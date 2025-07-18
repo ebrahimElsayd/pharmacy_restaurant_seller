@@ -9,6 +9,8 @@ class ProductModel {
   final String status;
   final int views;
   final int likes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   ProductModel({
     required this.id,
@@ -21,11 +23,13 @@ class ProductModel {
     required this.status,
     required this.views,
     required this.likes,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
-      id: map['id'],  // أضف هذا السطر
+      id: map['id'],
       title: map['title'],
       description: map['description'],
       image: map['image'],
@@ -35,6 +39,25 @@ class ProductModel {
       status: map['status'],
       views: map['views'] ?? 0,
       likes: map['likes'] ?? 0,
+      createdAt: DateTime.parse(map['created_at']),
+      updatedAt: DateTime.parse(map['updated_at']),
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'image': image,
+      'category': category,
+      'amount': amount,
+      'discount_amount': discountAmount,
+      'status': status,
+      'views': views,
+      'likes': likes,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
   }
 }
