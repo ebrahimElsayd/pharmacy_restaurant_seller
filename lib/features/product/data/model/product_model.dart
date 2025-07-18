@@ -30,17 +30,17 @@ class ProductModel {
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
       id: map['id'],
-      title: map['title'],
-      description: map['description'],
-      image: map['image'],
-      category: map['category'],
-      amount: (map['amount'] as num).toDouble(),
-      discountAmount: (map['discount_amount'] as num).toDouble(),
-      status: map['status'],
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      image: map['image'] ?? '',
+      category: map['category'] ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      discountAmount: (map['discount_amount'] as num?)?.toDouble() ?? 0.0,
+      status: map['status'] ?? 'Available',
       views: map['views'] ?? 0,
       likes: map['likes'] ?? 0,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : DateTime.now(),
     );
   }
 
