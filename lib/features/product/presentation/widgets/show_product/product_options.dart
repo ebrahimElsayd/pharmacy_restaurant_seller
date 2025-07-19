@@ -28,6 +28,7 @@ Future<void> deleteProductAndImage({
   }
 }
 
+
 class ProductOptions extends ConsumerWidget {
   const ProductOptions({super.key, required this.product});
 
@@ -41,7 +42,7 @@ class ProductOptions extends ConsumerWidget {
          PopupMenuItem<String>(
           value: 'edit',
           child: ListTile(
-             onTap: (){    NavigateFN(context, () => EditProduct());},
+             onTap: (){    NavigateFN(context, () => EditProduct(product: product,));},
             leading: Icon(Icons.edit, size: 20),
             title: Text('Edit product'),
           ),

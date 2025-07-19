@@ -13,7 +13,7 @@ class ShowProductBody extends ConsumerWidget {
     final productsAsync = ref.watch(productsProvider);
 
     return RefreshIndicator(
-      onRefresh: ()async {
+      onRefresh: () async {
         ref.invalidate(productsProvider);
       },
       child: Padding(
@@ -39,25 +39,28 @@ class ShowProductBody extends ConsumerWidget {
                     },
                   );
                 },
-                loading: () => Skeletonizer(
-                  child: ListView.builder(
-                    itemCount: 6,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: Container(
-                          height: 260,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                error: (error, stack) =>
-                    Center(child: Text('Error: $error')),
+                loading:
+                    () => Skeletonizer(
+                      child: ListView.builder(
+                        itemCount: 6,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Container(
+                              height: 260,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                error: (error, stack) {
+                  print(error);
+                  return Center(child: Text('Error: $error'));
+                },
               ),
             ),
           ],
