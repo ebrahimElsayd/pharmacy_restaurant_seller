@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pharmacy_restaurant_seller/features/product/data/model/product_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/utils/show_snack_bar.dart';
-import '../../riverpods/product_river_pod/add_product_river_pod.dart';
+import '../../riverpods/product_river_pod/add_product/add_product_river_pod.dart';
 import '../../riverpods/product_river_pod/show_product_river_pod.dart';
 import '../add_product/custom_button_push.dart';
 import '../add_product/custom_drop_image.dart';

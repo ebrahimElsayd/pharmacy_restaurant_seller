@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/utils/show_snack_bar.dart';
-import '../../riverpods/product_river_pod/add_product_river_pod.dart';
+import '../../riverpods/product_river_pod/add_product/add_product_river_pod.dart';
 import '../../riverpods/product_river_pod/show_product_river_pod.dart';
 import 'custom_button_push.dart';
 import 'custom_drop_image.dart';

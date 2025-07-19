@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pharmacy_restaurant_seller/core/theme/app_pallete.dart';
-import '../../riverpods/product_river_pod/add_product_river_pod.dart';
+import '../../riverpods/product_river_pod/add_product/add_product_river_pod.dart';
 import 'custom_row_title.dart';
 
 class CustomCategoryDropdown extends ConsumerWidget {
