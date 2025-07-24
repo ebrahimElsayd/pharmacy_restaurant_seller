@@ -3,6 +3,7 @@ import 'package:pharmacy_restaurant_seller/core/theme/app_pallete.dart';
 import 'package:pharmacy_restaurant_seller/core/theme/values_manager.dart';
 
 class CustomPasswordField extends StatelessWidget {
+  final bool enabled;
   final TextEditingController controller;
   final String hintText;
   final IconData icon;
@@ -17,6 +18,7 @@ class CustomPasswordField extends StatelessWidget {
     required this.icon,
     required this.obscureText,
     required this.onToggleVisibility,
+    this.enabled = true,
     this.validator,
   });
 
@@ -28,6 +30,7 @@ class CustomPasswordField extends StatelessWidget {
         controller: controller,
         obscureText: obscureText,
         validator: validator,
+        enabled: enabled,
         decoration: InputDecoration(
           hintText: hintText,
           prefixIcon: Icon(icon, color: AppPallete.greyColor),

@@ -6,7 +6,11 @@ class CustomTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextEditingController controller;
   final String hintText;
+  final bool obscureText;
+  final bool enabled;
+  final ValueChanged<String>? onChanged;
   final IconData icon;
+  final Widget? suffixIcon;
   final String? Function(String?)? validator;
 
   const CustomTextField({
@@ -14,6 +18,10 @@ class CustomTextField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.icon,
+    this.suffixIcon,
+    this.onChanged,
+    this.obscureText = false,
+    this.enabled = true,
     this.keyboardType,
     this.validator,
   });
@@ -26,9 +34,13 @@ class CustomTextField extends StatelessWidget {
         keyboardType: keyboardType,
         controller: controller,
         validator: validator,
+        enabled: enabled,
+        obscureText: obscureText,
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hintText,
           prefixIcon: Icon(icon, color: AppPallete.greyColor),
+          suffixIcon: suffixIcon,
           filled: true,
           fillColor: AppPallete.whiteColor,
           contentPadding: EdgeInsets.all(AppPadding.p16),

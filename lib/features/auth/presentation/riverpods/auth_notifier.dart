@@ -1,187 +1,226 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../domain/repositories/auth_repository.dart';
-import '../../domain/usecases/forgot_password_usecase.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
-import '../../domain/usecases/update_password_usecase.dart';
-import '../../domain/usecases/verify_email_usecase.dart';
+import '../../domain/usecases/reset_pass_usecase.dart';
+import '../../domain/usecases/sign_out_usecase.dart';
+import '../../domain/usecases/get_current_user_usecase.dart';
 import 'auth_state.dart';
 
 class AuthNotifier extends StateNotifier<AuthStateData> {
-  final LoginUseCase _loginUseCase;
-  final RegisterUseCase _registerUseCase;
-  final ForgotPasswordUseCase _forgotPasswordUseCase;
-  final VerifyEmailUseCase _verifyEmailUseCase;
-  final UpdatePasswordUseCase _updatePasswordUseCase;
-  final AuthRepository _authRepository;
+  final SignInUseCase _signInUseCase;
+  final SignUpUseCase _signUpUseCase;
+  final SignOutUseCase _signOutUseCase;
+  final GetCurrentUserUseCase _getCurrentUserUseCase;
+  final ResetPasswordUseCase _resetPasswordUseCase;
 
-  AuthNotifier(
-    this._loginUseCase,
-    this._registerUseCase,
-    this._forgotPasswordUseCase,
-    this._verifyEmailUseCase,
-    this._updatePasswordUseCase,
-    this._authRepository,
-  ) : super(const AuthStateData(state: AuthState.initial)) {
-    _init();
+  AuthNotifier({
+    required SignInUseCase signInUseCase,
+    required SignUpUseCase signUpUseCase,
+    required SignOutUseCase signOutUseCase,
+    required GetCurrentUserUseCase getCurrentUserUseCase,
+    required ResetPasswordUseCase resetPasswordUseCase,
+  })  : _signInUseCase = signInUseCase,
+        _signUpUseCase = signUpUseCase,
+        _signOutUseCase = signOutUseCase,
+        _getCurrentUserUseCase = getCurrentUserUseCase,
+        _resetPasswordUseCase = resetPasswordUseCase,
+        super(const AuthStateData()) {
+    _checkAuthStatus();
   }
 
-  void _init() {
-    _getCurrentUser();
-    _listenToAuthChanges();
-  }
+  Future<void> _checkAuthStatus() async {
+    state = state.copyWith(state: AuthState.loading);
 
-  void _listenToAuthChanges() {
-    _authRepository.authStateChanges.listen((user) {
-      if (user != null) {
-        state = state.copyWith(
-          state: AuthState.authenticated,
-          user: user,
-          clearError: true,
-        );
-      } else {
-        state = state.copyWith(
-          state: AuthState.unauthenticated,
-          clearUser: true,
-          clearError: true,
-        );
-      }
-    });
-  }
+    final result = await _getCurrentUserUseCase();
 
-  Future<void> _getCurrentUser() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final user = await _authRepository.getCurrentUser();
-      if (user != null) {
-        state = state.copyWith(
-          state: AuthState.authenticated,
-          user: user,
-          isLoading: false,
-        );
-      } else {
-        state = state.copyWith(
-          state: AuthState.unauthenticated,
-          isLoading: false,
-        );
-      }
-    } catch (e) {
-      state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: e.toString(),
-        isLoading: false,
-      );
-    }
-  }
-
-  Future<void> login(String email, String password) async {
-    state = state.copyWith(isLoginLoading: true, clearError: true);
-
-    try {
-      final user = await _loginUseCase(email, password);
-      state = state.copyWith(
-        state: AuthState.authenticated,
-        user: user,
-        isLoginLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: e.toString(),
-        isLoginLoading: false,
-      );
-    }
-  }
-
-  Future<void> register(String email, String password, String name) async {
-    state = state.copyWith(isRegisterLoading: true, clearError: true);
-
-    try {
-      final user = await _registerUseCase(email, password, name);
-      state = state.copyWith(
-        state: AuthState.unauthenticated,
-        user: user,
-        isRegisterLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: e.toString(),
-        isRegisterLoading: false,
-      );
-    }
-  }
-
-  Future<void> forgotPassword(String email) async {
-    state = state.copyWith(isForgotPasswordLoading: true, clearError: true);
-
-    try {
-      await _forgotPasswordUseCase(email);
-      state = state.copyWith(
-        isForgotPasswordLoading: false,
-        errorMessage: 'Password reset email sent successfully',
-      );
-    } catch (e) {
-      state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: e.toString(),
-        isForgotPasswordLoading: false,
-      );
-    }
-  }
-
-  Future<void> verifyEmail(String email, String code) async {
-    state = state.copyWith(isVerificationLoading: true, clearError: true);
-
-    try {
-      await _verifyEmailUseCase(email, code);
-      state = state.copyWith(
-        isVerificationLoading: false,
-        errorMessage: 'Email verified successfully',
-      );
-    } catch (e) {
-      state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: e.toString(),
-        isVerificationLoading: false,
-      );
-    }
-  }
-
-  Future<void> updatePassword(String newPassword, String token) async {
-    state = state.copyWith(isPasswordUpdateLoading: true, clearError: true);
-
-    try {
-      await _updatePasswordUseCase(newPassword, token);
-      state = state.copyWith(
-        isPasswordUpdateLoading: false,
-        errorMessage: 'Password updated successfully',
-      );
-    } catch (e) {
-      state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: e.toString(),
-        isPasswordUpdateLoading: false,
-      );
-    }
-  }
-
-  Future<void> logout() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      await _authRepository.logout();
-      state = state.copyWith(
+    result.fold(
+          (failure) => state = state.copyWith(
         state: AuthState.unauthenticated,
         clearUser: true,
         clearError: true,
-        isLoading: false,
+      ),
+          (user) {
+        if (!user.isEmailVerified) {
+          state = state.copyWith(
+            state: AuthState.emailVerificationRequired,
+            user: user,
+            clearError: true,
+          );
+        } else {
+          state = state.copyWith(
+            state: AuthState.authenticated,
+            user: user,
+            clearError: true,
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> login(String email, String password) async {
+    state = state.copyWith(
+      isLoginLoading: true,
+      clearError: true,
+    );
+
+    final result = await _signInUseCase(SignInParams(
+      email: email,
+      password: password,
+    ));
+
+    result.fold(
+          (failure) => state = state.copyWith(
+        state: AuthState.error,
+        errorMessage: failure.message,
+        isLoginLoading: false,
+      ),
+          (_) async {
+        state = state.copyWith(isLoginLoading: false);
+        await _checkAuthStatus();
+      },
+    );
+  }
+
+  Future<void> register(
+      String email,
+      String password,
+      String fullName, {
+        String? phoneNumber,
+      }) async {
+    state = state.copyWith(
+      isRegisterLoading: true,
+      clearError: true,
+    );
+
+    final result = await _signUpUseCase(SignUpParams(
+      email: email,
+      password: password,
+      fullName: fullName,
+      phoneNumber: phoneNumber,
+    ));
+
+    result.fold(
+          (failure) {
+        print('[DEBUG] ❌ Failure in register: ${failure.message}');
+        print('[DEBUG] ❌ Failure code: ${failure.code}');
+        state = state.copyWith(
+          state: AuthState.error,
+          errorMessage: failure.message,
+          isRegisterLoading: false,
+        );
+      },
+          (_) {
+            print('[DEBUG] 🚀 Starting registration...');
+            print('[DEBUG] 📧 Email: $email');
+            print('[DEBUG] 🔐 Password: $password');
+            print('[DEBUG] 👤 Name: $fullName');
+
+            // بعد التسجيل الناجح، نضع حالة المستخدم مباشرة لشاشة التحقق من البريد
+        // نستخدم هنا طريقة آمنة للتعامل مع الكائنات بحيث نتوافق مع نظام الأنواع في Flutter
+        state = state.copyWith(
+          state: AuthState.emailVerificationRequired,
+          isRegisterLoading: false,
+          clearError: true,
+          // يجب أن نمرر null هنا بدلاً من UserEntity جديدة
+          // سيتم تحديثها بعد استجلاب معلومات المستخدم
+          user: null,
+        );
+
+        // نحتاج للتأكد من التحقق من المستخدم الحالي في خلفية العملية
+        _getCurrentUserUseCase().then((result) {
+          result.fold(
+                (failure) {
+                  print('[ERROR] ❌ Registration failed: ${failure.message}');
+
+                  // إذا فشل الحصول على معلومات المستخدم، نحافظ على الحالة الحالية
+            },
+                (user) {
+                  print('[DEBUG] ✅ Registration succeeded for user: ${user.email}');
+                  //     (f) => print('[ERROR] ❌ Failed to get current user: ${f.message}');
+                  // (u) => print('[DEBUG] ✅ Fetched current user: ${u.email}');
+                  // نحدث معلومات المستخدم إذا نجحنا في الحصول عليها
+              state = state.copyWith(
+                user: user,
+                state: AuthState.emailVerificationRequired,
+              );
+            },
+          );
+        });
+      },
+    );
+  }
+
+  Future<void> signOut() async {
+    state = state.copyWith(state: AuthState.loading);
+
+    final result = await _signOutUseCase();
+
+    result.fold(
+          (failure) => state = state.copyWith(
+        state: AuthState.error,
+        errorMessage: failure.message,
+      ),
+          (_) => state = state.copyWith(
+        state: AuthState.unauthenticated,
+        clearUser: true,
+        clearError: true,
+      ),
+    );
+  }
+
+  Future<void> forgotPassword(String email) async {
+    state = state.copyWith(
+      isForgotPasswordLoading: true,
+      clearError: true,
+    );
+
+    final result = await _resetPasswordUseCase(ResetPasswordParams(email: email));
+
+    result.fold(
+          (failure) => state = state.copyWith(
+        state: AuthState.error,
+        errorMessage: failure.message,
+        isForgotPasswordLoading: false,
+      ),
+          (_) => state = state.copyWith(
+        state: AuthState.passwordResetSent,
+        resetEmail: email,
+        isForgotPasswordLoading: false,
+        clearError: true,
+      ),
+    );
+  }
+
+  Future<void> updatePassword(String newPassword, String token) async {
+    state = state.copyWith(
+      isResetPasswordLoading: true,
+      clearError: true,
+    );
+
+    try {
+      final response = await Supabase.instance.client.auth.updateUser(
+          UserAttributes(password: newPassword)
       );
+
+      if (response.user != null) {
+        state = state.copyWith(
+          state: AuthState.authenticated,
+          isResetPasswordLoading: false,
+          clearError: true,
+        );
+      } else {
+        state = state.copyWith(
+          state: AuthState.error,
+          errorMessage: 'Failed to update password',
+          isResetPasswordLoading: false,
+        );
+      }
     } catch (e) {
       state = state.copyWith(
         state: AuthState.error,
         errorMessage: e.toString(),
-        isLoading: false,
+        isResetPasswordLoading: false,
       );
     }
   }
@@ -189,4 +228,30 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
   void clearError() {
     state = state.copyWith(clearError: true);
   }
+
+  void clearPasswordResetSent() {
+    if (state.state == AuthState.passwordResetSent) {
+      state = state.copyWith(state: AuthState.unauthenticated);
+    }
+  }
+
+  // Method to refresh auth status (useful for email verification)
+  Future<void> refreshAuthStatus() async {
+    await _checkAuthStatus();
+  }
+}
+
+// استخدام كائن مستخدم صغير للاستخدام المؤقت
+class UserEntity {
+  final String id;
+  final String email;
+  final String fullName;
+  final bool isEmailVerified;
+
+  const UserEntity({
+    required this.id,
+    required this.email,
+    required this.fullName,
+    this.isEmailVerified = false
+  });
 }

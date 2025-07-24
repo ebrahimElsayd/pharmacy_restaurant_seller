@@ -1,32 +1,66 @@
+import 'package:equatable/equatable.dart';
+import 'package:fpdart/fpdart.dart';  // تأكد من استيراد هذا
 import '../repositories/auth_repository.dart';
-import '../entities/user.dart';
+import '../../../../core/utils/validators.dart';
+import '../../../../core/erorr/failures.dart'; // مسار الفشل
 
-class RegisterUseCase {
-  final AuthRepository _authRepository;
+class SignUpUseCase {
+  final AuthRepository _repository;
 
-  RegisterUseCase(this._authRepository);
+  SignUpUseCase(this._repository);
 
-  Future<User> call(String email, String password, String name) async {
-    if (email.isEmpty || password.isEmpty || name.isEmpty) {
-      throw Exception('All fields are required');
+  Future<Either<Failure, void>> call(SignUpParams params) async {
+    // Validate input
+    final emailValidation = Validators.validateEmail(params.email);
+    if (emailValidation != null) {
+      return left(ValidationFailure(message: emailValidation));
     }
 
-    if (!_isValidEmail(email)) {
-      throw Exception('Please enter a valid email address');
+    final passwordValidation = Validators.validatePassword(params.password);
+    if (passwordValidation != null) {
+      return left(ValidationFailure(message: passwordValidation));
     }
 
-    if (password.length < 6) {
-      throw Exception('Password must be at least 6 characters');
+    final nameValidation = Validators.validateName(params.fullName);
+    if (nameValidation != null) {
+      return left(ValidationFailure(message: nameValidation));
     }
 
-    if (name.length < 2) {
-      throw Exception('Name must be at least 2 characters');
+    // Validate phone number if provided
+    if (params.phoneNumber != null) {
+      final phoneValidation = Validators.validatePhoneNumber(params.phoneNumber!);
+      if (phoneValidation != null) {
+        return left(ValidationFailure(message: phoneValidation));
+      }
     }
 
-    return await _authRepository.register(email, password, name);
+    // Execute sign up
+    return await _repository.signUp(
+      email: params.email,
+      password: params.password,
+      fullName: params.fullName,
+      phoneNumber: params.phoneNumber,
+    );
   }
+}
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
+class SignUpParams extends Equatable {
+  final String email;
+  final String password;
+  final String fullName;
+  final String? phoneNumber;
+
+  const SignUpParams({
+    required this.email,
+    required this.password,
+    required this.fullName,
+    this.phoneNumber,
+  });
+
+  @override
+  List<Object?> get props => [email, password, fullName, phoneNumber];
+
+  @override
+  String toString() =>
+      'SignUpParams(email: $email, fullName: $fullName, phoneNumber: $phoneNumber, password: [HIDDEN])';
 }

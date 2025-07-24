@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pharmacy_restaurant_seller/core/theme/app_pallete.dart';
-import 'package:pharmacy_restaurant_seller/core/theme/font_weight_helper.dart';
-import 'package:pharmacy_restaurant_seller/core/theme/values_manager.dart';
-import 'package:pharmacy_restaurant_seller/features/auth/presentation/screens/forgot_password_screen.dart';
-import 'package:pharmacy_restaurant_seller/features/auth/presentation/screens/signup_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_pallete.dart';
+import '../../../../core/theme/values_manager.dart';
+import '../riverpods/auth_providers.dart';
+import '../riverpods/auth_state.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_password_field.dart';
 import '../widgets/custom_text_field.dart';
@@ -23,6 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isListening = false;
 
   @override
   void dispose() {
@@ -31,95 +31,145 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _handleLogin() async {
+    ref.read(authNotifierProvider.notifier).clearError();
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    await ref.read(authNotifierProvider.notifier).login(email, password);
+  }
+
+  void _showMessage(String message, Color backgroundColor) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: backgroundColor,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // final authState = ref.watch(authControllerProvider);
+    final authState = ref.watch(authNotifierProvider);
+    final isLoginLoading = authState.isLoginLoading;
 
-    // ref.listen(authControllerProvider, (previous, next) {
-    //   if (previous?.isLoading == true && next.isLoading == false) {
-    //     if (next.error == null && next.user != null) {
-    //       Navigator.of(context).pushReplacementNamed('/home');
-    //     } else if (next.error != null) {
-    //       ScaffoldMessenger.of(context).showSnackBar(
-    //         SnackBar(
-    //           content: Text(next.error!),
-    //           backgroundColor: Colors.red,
-    //         ),
-    //       );
-    //     }
-    //   }
-    // });
+    // Listen to auth state changes once
+    if (!_isListening) {
+      ref.listen<AuthStateData>(authNotifierProvider, (previous, next) {
+        if (!mounted) return;
+
+        if (next.state == AuthState.authenticated &&
+            previous?.isLoginLoading == true &&
+            !next.isLoginLoading &&
+            next.user?.isEmailVerified == true) {
+          _showMessage('Login successful!', AppPallete.greenColor);
+          context.go('/dashboard');
+        }
+
+        if (next.state == AuthState.emailVerificationRequired) {
+          _showMessage('Please verify your email address', AppPallete.primaryColor);
+          context.go('/email-verification');
+        }
+
+        if (next.state == AuthState.error && next.errorMessage != null) {
+          _showMessage(next.errorMessage!, AppPallete.redColor);
+        }
+      });
+      _isListening = true;
+    }
 
     return Scaffold(
       backgroundColor: AppPallete.whiteColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppPadding.p24),
+          padding: EdgeInsets.all(AppSize.s24),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo
-                SvgPicture.asset(
-                  'assets/svgs/logo.svg',
-                  height: AppSize.s35,
-                  width: AppSize.s40,
-                ),
                 SizedBox(height: AppSize.s40),
 
+                // Logo
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppPallete.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.storefront_rounded,
+                    size: 40,
+                    color: AppPallete.primaryColor,
+                  ),
+                ),
+                SizedBox(height: AppSize.s24),
+
                 // Title
-                Center(
-                  child: Text(
-                    'Welcome Back',
-                    style: TextStyle(
-                      fontSize: FontSize.s32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                const Text(
+                  'Welcome Back',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppPallete.blackForText,
                   ),
                 ),
                 SizedBox(height: AppSize.s8),
-                Center(
-                  child: Text(
-                    'Sign in to your account',
-                    style: TextStyle(
-                      fontSize: FontSize.s16,
-                      color: AppPallete.greyColor,
-                    ),
+                const Text(
+                  'Sign in to continue',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppPallete.greyColor,
                   ),
                 ),
+                SizedBox(height: AppSize.s48),
 
-                // Avatar
-                Center(
-                  child: Image.asset('assets/images/login_signup_avatar.png'),
-                ),
-
-                // Fields
+                // Email Field
                 CustomTextField(
                   controller: _emailController,
-                  hintText: 'Your email',
+                  hintText: 'Enter your email',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
+                  enabled: !isLoginLoading,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value.trim())) {
                       return 'Please enter a valid email';
                     }
                     return null;
                   },
                 ),
-                SizedBox(height: AppSize.s16),
+                SizedBox(height: AppSize.s20),
 
+                // Password Field
                 CustomPasswordField(
                   controller: _passwordController,
-                  hintText: 'Password',
+                  hintText: 'Enter your password',
                   icon: Icons.lock_outline,
                   obscureText: _obscurePassword,
-                  onToggleVisibility:
-                      () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+                  enabled: !isLoginLoading,
+                  onToggleVisibility: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -140,38 +190,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         Checkbox(
                           value: _rememberMe,
-                          onChanged:
-                              (value) =>
-                                  setState(() => _rememberMe = value ?? false),
+                          onChanged: isLoginLoading
+                              ? null
+                              : (value) =>
+                              setState(() => _rememberMe = value ?? false),
                           activeColor: AppPallete.primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                        const Text('Remember me'),
+                        Text(
+                          'Remember me',
+                          style: TextStyle(
+                            color: isLoginLoading
+                                ? AppPallete.greyColor
+                                : AppPallete.blackForText,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: isLoginLoading
+                          ? null
+                          : () => context.push('/forgot-password'),
                       child: Text(
-                        'Forgot password?',
-                        style: TextStyle(color: AppPallete.primaryColor),
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: isLoginLoading
+                              ? AppPallete.greyColor
+                              : AppPallete.primaryColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: AppSize.s24),
+                SizedBox(height: AppSize.s32),
 
-                // Button
+                // Login Button
                 CustomButton(
-                  text: 'Login',
-                  // isLoading: authState.isLoading,
-                  onPressed: () {},
-                  //  onPressed: authState.isLoading ? null : _handleLogin,
+                  text: 'Sign In',
+                  isLoading: isLoginLoading,
+                  onPressed: isLoginLoading ? null : _handleLogin,
+                ),
+                SizedBox(height: AppSize.s32),
+
+                // Divider
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: AppPallete.greyColor)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or',
+                        style: TextStyle(
+                          color: AppPallete.greyColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: AppPallete.greyColor)),
+                  ],
                 ),
                 SizedBox(height: AppSize.s24),
 
@@ -179,25 +260,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Don\'t have an account?',
+                    const Text(
+                      'Don\'t have an account? ',
                       style: TextStyle(color: AppPallete.greyColor),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignUpScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: isLoginLoading
+                          ? null
+                          : () => context.push('/signup'),
                       child: Text(
-                        'Sign up',
-                        style: TextStyle(color: AppPallete.primaryColor),
+                        'Create Account',
+                        style: TextStyle(
+                          color: isLoginLoading
+                              ? AppPallete.greyColor
+                              : AppPallete.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
+                ),
+                SizedBox(height: AppSize.s32),
+
+                // App Version
+                Text(
+                  'Version 1.0.0',
+                  style: TextStyle(
+                    color: AppPallete.greyColor.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -206,13 +297,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-
-  // void _handleLogin() {
-  //   if (_formKey.currentState!.validate()) {
-  //     ref.read(authControllerProvider.notifier).signIn(
-  //       _emailController.text.trim(),
-  //       _passwordController.text.trim(),
-  //     );
-  //   }
-  // }
 }

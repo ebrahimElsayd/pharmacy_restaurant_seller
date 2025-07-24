@@ -1,122 +1,98 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../data/data_source/auth_remote_data_source.dart';
 import '../../data/repository/auth_repository_impl.dart';
-import '../../domain/entities/user.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../../domain/usecases/forgot_password_usecase.dart';
+import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
-import '../../domain/usecases/update_password_usecase.dart';
-import '../../domain/usecases/verify_email_usecase.dart';
-import 'auth_notifier.dart';
+import '../../domain/usecases/reset_pass_usecase.dart';
+import '../../domain/usecases/sign_out_usecase.dart';
+import '../../domain/usecases/get_current_user_usecase.dart';
+import '../../../../core/providers/supabase_provider.dart';
+import 'auth_notifier.dart' hide UserEntity;
 import 'auth_state.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState, User;
 
-// Data Source Provider
-final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return AuthRemoteDataSource(Supabase.instance.client);
+// Data Sources
+final authRemoteDataSourceProvider = Provider((ref) {
+  return AuthRemoteDataSourceImpl(
+    supabase: ref.read(supabaseProvider),
+  );
 });
 
-// Repository Provider
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final remoteDataSource = ref.watch(authRemoteDataSourceProvider);
-  return AuthRepositoryImpl(remoteDataSource);
+// Repository
+final authRepositoryProvider = Provider((ref) {
+  return AuthRepositoryImpl(
+    remoteDataSource: ref.read(authRemoteDataSourceProvider),
+    connectivity: Connectivity(),
+  );
 });
 
-// Use Cases Providers
-final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return LoginUseCase(repository);
+// Use Cases
+final signInUseCaseProvider = Provider((ref) {
+  return SignInUseCase(ref.read(authRepositoryProvider));
 });
 
-final registerUseCaseProvider = Provider<RegisterUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return RegisterUseCase(repository);
+final signUpUseCaseProvider = Provider((ref) {
+  return SignUpUseCase(ref.read(authRepositoryProvider));
 });
 
-final forgotPasswordUseCaseProvider = Provider<ForgotPasswordUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return ForgotPasswordUseCase(repository);
+final signOutUseCaseProvider = Provider((ref) {
+  return SignOutUseCase(ref.read(authRepositoryProvider));
 });
 
-final verifyEmailUseCaseProvider = Provider<VerifyEmailUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return VerifyEmailUseCase(repository);
+final getCurrentUserUseCaseProvider = Provider((ref) {
+  return GetCurrentUserUseCase(ref.read(authRepositoryProvider));
 });
 
-final updatePasswordUseCaseProvider = Provider<UpdatePasswordUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return UpdatePasswordUseCase(repository);
+final resetPasswordUseCaseProvider = Provider((ref) {
+  return ResetPasswordUseCase(ref.read(authRepositoryProvider));
 });
 
 // Main Auth Notifier Provider
-final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthStateData>(
-  (ref) {
-    final loginUseCase = ref.watch(loginUseCaseProvider);
-    final registerUseCase = ref.watch(registerUseCaseProvider);
-    final forgotPasswordUseCase = ref.watch(forgotPasswordUseCaseProvider);
-    final verifyEmailUseCase = ref.watch(verifyEmailUseCaseProvider);
-    final updatePasswordUseCase = ref.watch(updatePasswordUseCaseProvider);
-    final authRepository = ref.watch(authRepositoryProvider);
-
-    return AuthNotifier(
-      loginUseCase,
-      registerUseCase,
-      forgotPasswordUseCase,
-      verifyEmailUseCase,
-      updatePasswordUseCase,
-      authRepository,
-    );
-  },
-);
-
-// Helper Providers
-final currentUserProvider = Provider<User?>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.user;
+final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthStateData>((ref) {
+  return AuthNotifier(
+    signInUseCase: ref.read(signInUseCaseProvider),
+    signUpUseCase: ref.read(signUpUseCaseProvider),
+    signOutUseCase: ref.read(signOutUseCaseProvider),
+    getCurrentUserUseCase: ref.read(getCurrentUserUseCaseProvider),
+    resetPasswordUseCase: ref.read(resetPasswordUseCaseProvider),
+  );
 });
 
+// Individual state providers for convenience
 final authStateProvider = Provider<AuthState>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.state;
-});
-
-final isAuthenticatedProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState == AuthState.authenticated;
+  return ref.watch(authNotifierProvider).state;
 });
 
 final isLoadingProvider = Provider<bool>((ref) {
   final authState = ref.watch(authNotifierProvider);
-  return authState.isAnyLoading;
-});
-
-final errorMessageProvider = Provider<String?>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.errorMessage;
+  return authState.isLoginLoading ||
+      authState.isRegisterLoading ||
+      authState.isForgotPasswordLoading ||
+      authState.isResetPasswordLoading;
 });
 
 final isLoginLoadingProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.isLoginLoading;
+  return ref.watch(authNotifierProvider).isLoginLoading;
 });
 
 final isRegisterLoadingProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.isRegisterLoading;
+  return ref.watch(authNotifierProvider).isRegisterLoading;
 });
 
 final isForgotPasswordLoadingProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.isForgotPasswordLoading;
+  return ref.watch(authNotifierProvider).isForgotPasswordLoading;
 });
 
-final isVerificationLoadingProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.isVerificationLoading;
+final isResetPasswordLoadingProvider = Provider<bool>((ref) {
+  return ref.watch(authNotifierProvider).isResetPasswordLoading;
 });
 
-final isPasswordUpdateLoadingProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.isPasswordUpdateLoading;
+final errorMessageProvider = Provider<String?>((ref) {
+  return ref.watch(authNotifierProvider).errorMessage;
+});
+
+final currentUserProvider = Provider<UserEntity?>((ref) {
+  return ref.watch(authNotifierProvider).user;
 });

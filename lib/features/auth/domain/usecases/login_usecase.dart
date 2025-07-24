@@ -1,28 +1,46 @@
+import 'package:equatable/equatable.dart';
+import 'package:fpdart/fpdart.dart';
+import '../../../../core/erorr/failures.dart';
 import '../repositories/auth_repository.dart';
-import '../entities/user.dart';
+import '../../../../core/utils/validators.dart';
 
-class LoginUseCase {
-  final AuthRepository _authRepository;
+class SignInUseCase {
+  final AuthRepository _repository;
 
-  LoginUseCase(this._authRepository);
+  SignInUseCase(this._repository);
 
-  Future<User> call(String email, String password) async {
-    if (email.isEmpty || password.isEmpty) {
-      throw Exception('Email and password cannot be empty');
+  Future<Either<Failure, Unit>> call(SignInParams params) async {
+    // Validate input
+    final emailValidation = Validators.validateEmail(params.email);
+    if (emailValidation != null) {
+      return left(ValidationFailure(message: emailValidation));
     }
 
-    if (!_isValidEmail(email)) {
-      throw Exception('Please enter a valid email address');
+    final passwordValidation = Validators.validatePassword(params.password);
+    if (passwordValidation != null) {
+      return left(ValidationFailure(message: passwordValidation));
     }
 
-    if (password.length < 6) {
-      throw Exception('Password must be at least 6 characters');
-    }
-
-    return await _authRepository.login(email, password);
+    // Execute sign in
+    return await _repository.signIn(
+      email: params.email,
+      password: params.password,
+    );
   }
+}
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
+class SignInParams extends Equatable {
+  final String email;
+  final String password;
+
+  const SignInParams({
+    required this.email,
+    required this.password,
+  });
+
+  @override
+  List<Object> get props => [email, password];
+
+  @override
+  String toString() => 'SignInParams(email: $email, password: [HIDDEN])';
 }

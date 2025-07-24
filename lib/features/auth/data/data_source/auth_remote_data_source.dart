@@ -1,670 +1,391 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 
-class AuthRemoteDataSource {
-  final SupabaseClient _supabaseClient;
+abstract class AuthRemoteDataSource {
+  Future<UserModel> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    String? phoneNumber,
+  });
 
-  AuthRemoteDataSource(this._supabaseClient);
+  Future<UserModel> signIn({
+    required String email,
+    required String password,
+  });
 
-  Future<UserModel> signInWithEmail(String email, String password) async {
+  Future<void> signOut();
+
+  Future<UserModel?> getCurrentUser();
+
+  Future<void> resetPassword({required String email});
+
+  Future<void> updatePassword({required String newPassword});
+
+  Future<UserModel> updateUserProfile({
+    required String userId,
+    required Map<String, dynamic> userData,
+  });
+
+  Future<void> deleteAccount();
+
+  Future<void> resendEmailVerification();
+
+  Stream<AuthState> watchAuthState();
+
+  Future<void> refreshSession();
+}
+
+class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+  final SupabaseClient _supabase;
+
+  const AuthRemoteDataSourceImpl({required SupabaseClient supabase})
+      : _supabase = supabase;
+
+  @override
+  Future<UserModel> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    String? phoneNumber,
+  }) async {
     try {
-      final response = await _supabaseClient.auth.signInWithPassword(
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'full_name': fullName,
+          if (phoneNumber != null) 'phone_number': phoneNumber,
+        },
+      );
+
+      final user = response.user;
+      if (user == null) {
+        throw const AuthException('فشل في إنشاء الحساب');
+      }
+
+      // إنشاء ملف البائع مع معالجة أفضل للأخطاء
+      try {
+        await _createSellerProfile(
+          userId: user.id,
+          email: email,
+          fullName: fullName,
+          phoneNumber: phoneNumber,
+        );
+      } catch (e) {
+        // إذا فشل إنشاء ملف البائع، احذف المستخدم من Auth
+        print('[ERROR] Failed to create seller profile: $e');
+
+        try {
+          await _supabase.auth.signOut(); // تنظيف الجلسة
+        } catch (_) {}
+
+        if (e is PostgrestException) {
+          if (e.message.contains('row-level security')) {
+            throw const AuthException('خطأ في إعدادات الأمان. يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.');
+          }
+          throw AuthException('خطأ في إنشاء الملف الشخصي: ${e.message}');
+        }
+
+        throw const AuthException('فشل في إنشاء الملف الشخصي');
+      }
+
+      return UserModel(
+        id: user.id,
+        email: email,
+        fullName: fullName,
+        phoneNumber: phoneNumber,
+        isEmailVerified: user.emailConfirmedAt != null,
+        createdAt: DateTime.parse(user.createdAt),
+        updatedAt: user.updatedAt != null ? DateTime.parse(user.updatedAt!) : null,
+        isActive: true,
+      );
+    } on AuthException catch (e) {
+      print('[AUTH_ERROR] ${e.message}');
+      rethrow;
+    } on PostgrestException catch (e) {
+      print('[DB_ERROR] ${e.message}');
+      throw AuthException(_getErrorMessage(e.message));
+    } catch (e) {
+      print('[UNKNOWN_ERROR] $e');
+      throw const AuthException('حدث خطأ غير متوقع أثناء إنشاء الحساب');
+    }
+  }
+
+
+  @override
+  Future<UserModel> signIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (response.user == null) {
-        throw Exception('Login failed');
+      final user = response.user;
+      if (user == null) {
+        throw const AuthException('فشل في تسجيل الدخول');
       }
 
-      return UserModel.fromJson({
-        'id': response.user!.id,
-        'email': response.user!.email!,
-        'name': response.user!.userMetadata?['name'],
-        'email_verified': response.user!.emailConfirmedAt != null,
-        'created_at': response.user!.createdAt,
-      });
-    } on AuthException catch (e) {
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('An unexpected error occurred');
-    }
-  }
+      // Update last login and get user profile concurrently
+      final results = await Future.wait([
+        _updateLastLogin(user.id),
+        _getUserProfile(user.id),
+      ]);
 
-  Future<UserModel> signUp(String email, String password, String name) async {
-    try {
-      final response = await _supabaseClient.auth.signUp(
-        email: email,
-        password: password,
-        data: {'name': name},
+      final userProfile = results[1] as Map<String, dynamic>;
+
+      return UserModel.fromSupabaseUser(
+        userProfile,
+        user.id,
+        user.email!,
       );
-
-      if (response.user == null) {
-        throw Exception('Registration failed');
-      }
-
-      return UserModel.fromJson({
-        'id': response.user!.id,
-        'email': response.user!.email!,
-        'name': name,
-        'email_verified': response.user!.emailConfirmedAt != null,
-        'created_at': response.user!.createdAt,
-      });
-    } on AuthException catch (e) {
-      throw Exception(e.message);
+    } on AuthException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      throw AuthException(_getErrorMessage(e.message));
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw AuthException('فشل في تسجيل الدخول');
     }
   }
 
-  Future<void> resetPassword(String email) async {
-    try {
-      await _supabaseClient.auth.resetPasswordForEmail(email);
-    } on AuthException catch (e) {
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('An unexpected error occurred');
-    }
-  }
-
-  Future<void> verifyOTP(String email, String code) async {
-    try {
-      await _supabaseClient.auth.verifyOTP(
-        email: email,
-        token: code,
-        type: OtpType.email,
-      );
-    } on AuthException catch (e) {
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('An unexpected error occurred');
-    }
-  }
-
-  Future<void> updatePassword(String newPassword, String token) async {
-    try {
-      await _supabaseClient.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
-    } on AuthException catch (e) {
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('An unexpected error occurred');
-    }
-  }
-
+  @override
   Future<void> signOut() async {
     try {
-      await _supabaseClient.auth.signOut();
-    } on AuthException catch (e) {
-      throw Exception(e.message);
+      await _supabase.auth.signOut();
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw AuthException('فشل في تسجيل الخروج');
     }
   }
 
+  @override
   Future<UserModel?> getCurrentUser() async {
     try {
-      final user = _supabaseClient.auth.currentUser;
-      if (user == null) return null;
+      final user = _supabase.auth.currentUser;
+      if (user?.id == null || user?.email == null) return null;
 
-      return UserModel.fromJson({
-        'id': user.id,
-        'email': user.email!,
-        'name': user.userMetadata?['name'],
-        'email_verified': user.emailConfirmedAt != null,
-        'created_at': user.createdAt,
-      });
+      final userProfile = await _getUserProfile(user!.id);
+      return UserModel.fromSupabaseUser(
+        userProfile,
+        user.id,
+        user.email!,
+      );
     } catch (e) {
       return null;
     }
   }
 
-  Stream<UserModel?> get authStateChanges {
-    return _supabaseClient.auth.onAuthStateChange.map((data) {
-      final user = data.session?.user;
-      if (user == null) return null;
-
-      return UserModel.fromJson({
-        'id': user.id,
-        'email': user.email!,
-        'name': user.userMetadata?['name'],
-        'email_verified': user.emailConfirmedAt != null,
-        'created_at': user.createdAt,
-      });
-    });
+  @override
+  Future<void> resetPassword({required String email}) async {
+    try {
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        // redirectTo: Constants.resetPasswordRedirectUrl,
+      );
+    } catch (e) {
+      throw AuthException('فشل في إرسال رابط استعادة كلمة المرور');
+    }
   }
+
+  @override
+  Future<void> updatePassword({required String newPassword}) async {
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+    } catch (e) {
+      throw AuthException('فشل في تحديث كلمة المرور');
+    }
+  }
+
+  @override
+  Future<UserModel> updateUserProfile({
+    required String userId,
+    required Map<String, dynamic> userData,
+  }) async {
+    try {
+      final updatedData = {
+        ...userData,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      final response = await _supabase
+          .from('sellers')
+          .update(updatedData)
+          .eq('id', userId)
+          .select()
+          .single();
+
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser?.email == null) {
+        throw const AuthException('المستخدم غير مسجل دخول');
+      }
+
+      return UserModel.fromSupabaseUser(
+        response,
+        userId,
+        currentUser!.email!,
+      );
+    } on PostgrestException catch (e) {
+      throw AuthException('فشل في تحديث البيانات: ${e.message}');
+    } catch (e) {
+      throw AuthException('فشل في تحديث الملف الشخصي');
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw const AuthException('المستخدم غير مسجل دخول');
+      }
+
+      // Delete user profile first, then auth user
+      await _supabase.from('sellers').delete().eq('id', user.id);
+
+      // Note: This might need admin privileges or different implementation
+      // based on your Supabase configuration
+      await _supabase.auth.admin.deleteUser(user.id);
+    } on PostgrestException catch (e) {
+      throw AuthException('فشل في حذف بيانات المستخدم');
+    } catch (e) {
+      throw AuthException('فشل في حذف الحساب');
+    }
+  }
+
+  @override
+  Future<void> resendEmailVerification() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user?.email == null) {
+        throw const AuthException('المستخدم غير مسجل دخول');
+      }
+
+      await _supabase.auth.resend(
+        type: OtpType.signup,
+        email: user!.email,
+      );
+    } catch (e) {
+      throw AuthException('فشل في إرسال رسالة التحقق');
+    }
+  }
+
+  @override
+  Stream<AuthState> watchAuthState() {
+    return _supabase.auth.onAuthStateChange;
+  }
+
+  @override
+  Future<void> refreshSession() async {
+    try {
+      await _supabase.auth.refreshSession();
+    } catch (e) {
+      throw AuthException('فشل في تحديث الجلسة');
+    }
+  }
+
+  // Private helper methods
+  Future<void> _createSellerProfile({
+    required String userId,
+    required String email,
+    required String fullName,
+    String? phoneNumber,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final sellerData = <String, dynamic>{
+        'id': userId,
+        'email': email,
+        'full_name': fullName,
+        'email_verified': false,
+        'is_active': true,
+        'created_at': now,
+        'updated_at': now,
+        if (phoneNumber != null) 'phone_number': phoneNumber,
+      };
+
+      print('[DEBUG] Creating seller profile with data: $sellerData');
+
+      final response = await _supabase
+          .from('sellers')
+          .insert(sellerData)
+          .select()
+          .single();
+
+      print('[DEBUG] Seller profile created successfully: ${response['id']}');
+
+    } on PostgrestException catch (e) {
+      print('[DB_ERROR] Failed to create seller profile: ${e.message}');
+      print('[DB_ERROR] Error code: ${e.code}');
+      print('[DB_ERROR] Error details: ${e.details}');
+      rethrow;
+    } catch (e) {
+      print('[ERROR] Unexpected error creating seller profile: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _getUserProfile(String userId) async {
+    final response = await _supabase
+        .from('sellers')
+        .select()
+        .eq('id', userId)
+        .single();
+
+    return response;
+  }
+
+  Future<void> _updateLastLogin(String userId) async {
+    await _supabase.from('sellers').update({
+      'last_login_at': DateTime.now().toIso8601String(),
+    }).eq('id', userId);
+  }
+
+  String _getErrorMessage(String error) {
+    final errorLower = error.toLowerCase();
+
+    // أخطاء Row Level Security
+    if (errorLower.contains('row-level security') ||
+        errorLower.contains('policy')) {
+      return 'خطأ في إعدادات الأمان. يرجى المحاولة مرة أخرى.';
+    }
+
+    // أخطاء البريد الإلكتروني
+    if (errorLower.contains('email')) {
+      if (errorLower.contains('already') || errorLower.contains('exists')) {
+        return 'البريد الإلكتروني مستخدم مسبقاً';
+      }
+      if (errorLower.contains('invalid') || errorLower.contains('format')) {
+        return 'البريد الإلكتروني غير صحيح';
+      }
+    }
+
+    // أخطاء كلمة المرور
+    if (errorLower.contains('password')) {
+      if (errorLower.contains('weak') || errorLower.contains('short')) {
+        return 'كلمة المرور ضعيفة أو قصيرة';
+      }
+    }
+
+    // أخطاء قاعدة البيانات
+    if (errorLower.contains('duplicate') || errorLower.contains('unique')) {
+      return 'البيانات مكررة. المستخدم موجود مسبقاً.';
+    }
+
+    // أخطاء الشبكة
+    if (errorLower.contains('network') || errorLower.contains('connection') || errorLower.contains('timeout')) {
+      return 'مشكلة في الاتصال، تحقق من الإنترنت';
+    }
+
+    // أخطاء الخادم
+    if (errorLower.contains('server') || errorLower.contains('500')) {
+      return 'خطأ في الخادم، حاول مرة أخرى';
+    }
+
+    return 'حدث خطأ غير متوقع';
+  }
+
 }
-
-// import 'package:supabase_flutter/supabase_flutter.dart';
-
-// abstract class AuthRemoteDataSource {
-//   Future<AuthResponse> signInWithEmail(String email, String password);
-//   Future<AuthResponse> signUpWithEmail(String email, String password);
-//   Future<void> signOut();
-//   Future<User?> getCurrentUser();
-//   Future<void> resetPassword(String email);
-// }
-
-// class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-//   final SupabaseClient supabaseClient;
-
-//   AuthRemoteDataSourceImpl({required this.supabaseClient});
-
-//   @override
-//   Future<AuthResponse> signInWithEmail(String email, String password) async {
-//     try {
-//       final response = await supabaseClient.auth.signInWithPassword(
-//         email: email,
-//         password: password,
-//       );
-//       return response;
-//     } catch (e) {
-//       throw Exception('Failed to sign in: $e');
-//     }
-//   }
-
-//   @override
-//   Future<AuthResponse> signUpWithEmail(String email, String password) async {
-//     try {
-//       final response = await supabaseClient.auth.signUp(
-//         email: email,
-//         password: password,
-//       );
-//       return response;
-//     } catch (e) {
-//       throw Exception('Failed to sign up: $e');
-//     }
-//   }
-
-//   @override
-//   Future<void> signOut() async {
-//     try {
-//       await supabaseClient.auth.signOut();
-//     } catch (e) {
-//       throw Exception('Failed to sign out: $e');
-//     }
-//   }
-
-//   @override
-//   Future<User?> getCurrentUser() async {
-//     return supabaseClient.auth.currentUser;
-//   }
-
-//   @override
-//   Future<void> resetPassword(String email) async {
-//     try {
-//       await supabaseClient.auth.resetPasswordForEmail(email);
-//     } catch (e) {
-//       throw Exception('Failed to reset password: $e');
-//     }
-//   }
-// }
-
-// // 2. Auth Repository
-// // lib/features/auth/domain/repository/auth_repository.dart
-// import 'package:dartz/dartz.dart';
-//
-// abstract class AuthRepository {
-//   Future<Either<Failure, User>> signInWithEmail(String email, String password);
-//   Future<Either<Failure, User>> signUpWithEmail(String email, String password);
-//   Future<Either<Failure, void>> signOut();
-//   Future<Either<Failure, User?>> getCurrentUser();
-//   Future<Either<Failure, void>> resetPassword(String email);
-// }
-//
-// class AuthRepositoryImpl implements AuthRepository {
-//   final AuthRemoteDataSource remoteDataSource;
-//
-//   AuthRepositoryImpl({required this.remoteDataSource});
-//
-//   @override
-//   Future<Either<Failure, User>> signInWithEmail(String email, String password) async {
-//     try {
-//       final response = await remoteDataSource.signInWithEmail(email, password);
-//       if (response.user != null) {
-//         return Right(response.user!);
-//       } else {
-//         return Left(AuthFailure('Invalid credentials'));
-//       }
-//     } catch (e) {
-//       return Left(AuthFailure(e.toString()));
-//     }
-//   }
-//
-//   @override
-//   Future<Either<Failure, User>> signUpWithEmail(String email, String password) async {
-//     try {
-//       final response = await remoteDataSource.signUpWithEmail(email, password);
-//       if (response.user != null) {
-//         return Right(response.user!);
-//       } else {
-//         return Left(AuthFailure('Failed to create account'));
-//       }
-//     } catch (e) {
-//       return Left(AuthFailure(e.toString()));
-//     }
-//   }
-//
-//   @override
-//   Future<Either<Failure, void>> signOut() async {
-//     try {
-//       await remoteDataSource.signOut();
-//       return const Right(null);
-//     } catch (e) {
-//       return Left(AuthFailure(e.toString()));
-//     }
-//   }
-//
-//   @override
-//   Future<Either<Failure, User?>> getCurrentUser() async {
-//     try {
-//       final user = await remoteDataSource.getCurrentUser();
-//       return Right(user);
-//     } catch (e) {
-//       return Left(AuthFailure(e.toString()));
-//     }
-//   }
-//
-//   @override
-//   Future<Either<Failure, void>> resetPassword(String email) async {
-//     try {
-//       await remoteDataSource.resetPassword(email);
-//       return const Right(null);
-//     } catch (e) {
-//       return Left(AuthFailure(e.toString()));
-//     }
-//   }
-// }
-//
-// // 3. Auth State Management with Riverpod
-// // lib/features/auth/presentation/controllers/auth_controller.dart
-// import 'package:riverpod_annotation/riverpod_annotation.dart';
-// import 'package:freezed_annotation/freezed_annotation.dart';
-//
-// part 'auth_controller.freezed.dart';
-// part 'auth_controller.g.dart';
-//
-// @freezed
-// class AuthState with _$AuthState {
-//   const factory AuthState({
-//     @Default(false) bool isLoading,
-//     @Default(AuthStatus.initial) AuthStatus status,
-//     User? user,
-//     String? error,
-//   }) = _AuthState;
-// }
-//
-// enum AuthStatus {
-//   initial,
-//   authenticated,
-//   unauthenticated,
-//   loading,
-//   error,
-// }
-//
-// @riverpod
-// class AuthController extends _$AuthController {
-//   @override
-//   AuthState build() {
-//     _initializeAuth();
-//     return const AuthState();
-//   }
-//
-//   Future<void> _initializeAuth() async {
-//     state = state.copyWith(isLoading: true);
-//
-//     final authRepository = ref.read(authRepositoryProvider);
-//     final result = await authRepository.getCurrentUser();
-//
-//     result.fold(
-//           (failure) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.error,
-//         error: failure.message,
-//       ),
-//           (user) => state = state.copyWith(
-//         isLoading: false,
-//         status: user != null ? AuthStatus.authenticated : AuthStatus.unauthenticated,
-//         user: user,
-//       ),
-//     );
-//   }
-//
-//   Future<void> signIn(String email, String password) async {
-//     if (!_validateEmail(email) || !_validatePassword(password)) {
-//       state = state.copyWith(
-//         error: 'Invalid email or password format',
-//         status: AuthStatus.error,
-//       );
-//       return;
-//     }
-//
-//     state = state.copyWith(
-//       isLoading: true,
-//       error: null,
-//       status: AuthStatus.loading,
-//     );
-//
-//     final authRepository = ref.read(authRepositoryProvider);
-//     final result = await authRepository.signInWithEmail(email, password);
-//
-//     result.fold(
-//           (failure) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.error,
-//         error: failure.message,
-//       ),
-//           (user) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.authenticated,
-//         user: user,
-//         error: null,
-//       ),
-//     );
-//   }
-//
-//   Future<void> signUp(String email, String password) async {
-//     if (!_validateEmail(email) || !_validatePassword(password)) {
-//       state = state.copyWith(
-//         error: 'Invalid email or password format',
-//         status: AuthStatus.error,
-//       );
-//       return;
-//     }
-//
-//     state = state.copyWith(
-//       isLoading: true,
-//       error: null,
-//       status: AuthStatus.loading,
-//     );
-//
-//     final authRepository = ref.read(authRepositoryProvider);
-//     final result = await authRepository.signUpWithEmail(email, password);
-//
-//     result.fold(
-//           (failure) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.error,
-//         error: failure.message,
-//       ),
-//           (user) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.authenticated,
-//         user: user,
-//         error: null,
-//       ),
-//     );
-//   }
-//
-//   Future<void> signOut() async {
-//     state = state.copyWith(isLoading: true);
-//
-//     final authRepository = ref.read(authRepositoryProvider);
-//     final result = await authRepository.signOut();
-//
-//     result.fold(
-//           (failure) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.error,
-//         error: failure.message,
-//       ),
-//           (_) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.unauthenticated,
-//         user: null,
-//         error: null,
-//       ),
-//     );
-//   }
-//
-//   Future<void> resetPassword(String email) async {
-//     if (!_validateEmail(email)) {
-//       state = state.copyWith(
-//         error: 'Invalid email format',
-//         status: AuthStatus.error,
-//       );
-//       return;
-//     }
-//
-//     state = state.copyWith(isLoading: true);
-//
-//     final authRepository = ref.read(authRepositoryProvider);
-//     final result = await authRepository.resetPassword(email);
-//
-//     result.fold(
-//           (failure) => state = state.copyWith(
-//         isLoading: false,
-//         status: AuthStatus.error,
-//         error: failure.message,
-//       ),
-//           (_) => state = state.copyWith(
-//         isLoading: false,
-//         error: null,
-//       ),
-//     );
-//   }
-//
-//   bool _validateEmail(String email) {
-//     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
-//   }
-//
-//   bool _validatePassword(String password) {
-//     return password.length >= 6;
-//   }
-// }
-//
-// // 4. Providers
-// // lib/features/auth/presentation/controllers/auth_providers.dart
-// @riverpod
-// SupabaseClient supabaseClient(SupabaseClientRef ref) {
-//   return Supabase.instance.client;
-// }
-//
-// @riverpod
-// AuthRemoteDataSource authRemoteDataSource(AuthRemoteDataSourceRef ref) {
-//   return AuthRemoteDataSourceImpl(
-//     supabaseClient: ref.watch(supabaseClientProvider),
-//   );
-// }
-//
-// @riverpod
-// AuthRepository authRepository(AuthRepositoryRef ref) {
-//   return AuthRepositoryImpl(
-//     remoteDataSource: ref.watch(authRemoteDataSourceProvider),
-//   );
-// }
-//
-// // 5. Login Screen
-// // lib/features/auth/presentation/screens/login_screen.dart
-// class LoginScreen extends ConsumerStatefulWidget {
-//   @override
-//   ConsumerState<LoginScreen> createState() => _LoginScreenState();
-// }
-//
-// class _LoginScreenState extends ConsumerState<LoginScreen> {
-//   final _formKey = GlobalKey<FormState>();
-//   final _emailController = TextEditingController();
-//   final _passwordController = TextEditingController();
-//   bool _obscurePassword = true;
-//
-//   @override
-//   void dispose() {
-//     _emailController.dispose();
-//     _passwordController.dispose();
-//     super.dispose();
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final authState = ref.watch(authControllerProvider);
-//
-//     ref.listen(authControllerProvider, (previous, next) {
-//       if (next.status == AuthStatus.authenticated) {
-//         Navigator.of(context).pushReplacementNamed('/home');
-//       } else if (next.status == AuthStatus.error && next.error != null) {
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text(next.error!)),
-//         );
-//       }
-//     });
-//
-//     return Scaffold(
-//       appBar: AppBar(title: const Text('Login')),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Form(
-//           key: _formKey,
-//           child: Column(
-//             children: [
-//               TextFormField(
-//                 controller: _emailController,
-//                 keyboardType: TextInputType.emailAddress,
-//                 decoration: const InputDecoration(
-//                   labelText: 'Email',
-//                   prefixIcon: Icon(Icons.email),
-//                 ),
-//                 validator: (value) {
-//                   if (value == null || value.isEmpty) {
-//                     return 'Please enter your email';
-//                   }
-//                   if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-//                     return 'Please enter a valid email';
-//                   }
-//                   return null;
-//                 },
-//               ),
-//               const SizedBox(height: 16),
-//               TextFormField(
-//                 controller: _passwordController,
-//                 obscureText: _obscurePassword,
-//                 decoration: InputDecoration(
-//                   labelText: 'Password',
-//                   prefixIcon: const Icon(Icons.lock),
-//                   suffixIcon: IconButton(
-//                     icon: Icon(
-//                       _obscurePassword ? Icons.visibility : Icons.visibility_off,
-//                     ),
-//                     onPressed: () {
-//                       setState(() {
-//                         _obscurePassword = !_obscurePassword;
-//                       });
-//                     },
-//                   ),
-//                 ),
-//                 validator: (value) {
-//                   if (value == null || value.isEmpty) {
-//                     return 'Please enter your password';
-//                   }
-//                   if (value.length < 6) {
-//                     return 'Password must be at least 6 characters';
-//                   }
-//                   return null;
-//                 },
-//               ),
-//               const SizedBox(height: 24),
-//               SizedBox(
-//                 width: double.infinity,
-//                 child: ElevatedButton(
-//                   onPressed: authState.isLoading
-//                       ? null
-//                       : () => _handleLogin(context),
-//                   child: authState.isLoading
-//                       ? const CircularProgressIndicator()
-//                       : const Text('Login'),
-//                 ),
-//               ),
-//               TextButton(
-//                 onPressed: () => Navigator.of(context).pushNamed('/register'),
-//                 child: const Text('Don\'t have an account? Sign up'),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   void _handleLogin(BuildContext context) {
-//     if (_formKey.currentState!.validate()) {
-//       ref.read(authControllerProvider.notifier).signIn(
-//         _emailController.text.trim(),
-//         _passwordController.text,
-//       );
-//     }
-//   }
-// }
-//
-// // 6. Security Configuration
-// // lib/core/security/security_config.dart
-// class SecurityConfig {
-//   static const int maxLoginAttempts = 5;
-//   static const Duration lockoutDuration = Duration(minutes: 15);
-//   static const Duration sessionTimeout = Duration(hours: 24);
-//
-//   // Rate limiting for API calls
-//   static const Duration apiCallInterval = Duration(seconds: 1);
-//
-//   // Password requirements
-//   static const int minPasswordLength = 8;
-//   static const bool requireUppercase = true;
-//   static const bool requireLowercase = true;
-//   static const bool requireNumbers = true;
-//   static const bool requireSpecialChars = true;
-//
-//   static bool isPasswordStrong(String password) {
-//     if (password.length < minPasswordLength) return false;
-//     if (requireUppercase && !password.contains(RegExp(r'[A-Z]'))) return false;
-//     if (requireLowercase && !password.contains(RegExp(r'[a-z]'))) return false;
-//     if (requireNumbers && !password.contains(RegExp(r'[0-9]'))) return false;
-//     if (requireSpecialChars && !password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return false;
-//
-//     return true;
-//   }
-// }
-//
-// // 7. Error Handling
-// // lib/core/error/failures.dart
-// abstract class Failure {
-//   final String message;
-//   const Failure(this.message);
-// }
-//
-// class AuthFailure extends Failure {
-//   const AuthFailure(String message) : super(message);
-// }
-//
-// class NetworkFailure extends Failure {
-//   const NetworkFailure(String message) : super(message);
-// }
-//
-// class ServerFailure extends Failure {
-//   const ServerFailure(String message) : super(message);
-// }
-//
-// // 8. Auth Guard
-// // lib/features/auth/presentation/guards/auth_guard.dart
-// class AuthGuard extends ConsumerWidget {
-//   final Widget child;
-//
-//   const AuthGuard({Key? key, required this.child}) : super(key: key);
-//
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     final authState = ref.watch(authControllerProvider);
-//
-//     return authState.when(
-//       loading: () => const Scaffold(
-//         body: Center(child: CircularProgressIndicator()),
-//       ),
-//       error: (error, stack) => const LoginScreen(),
-//       data: (state) {
-//         if (state.status == AuthStatus.authenticated) {
-//           return child;
-//         } else {
-//           return const LoginScreen();
-//         }
-//       },
-//     );
-//   }
-// }
