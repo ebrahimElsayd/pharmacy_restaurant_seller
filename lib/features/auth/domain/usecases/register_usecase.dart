@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
-import 'package:fpdart/fpdart.dart';  // تأكد من استيراد هذا
+import 'package:fpdart/fpdart.dart';
 import '../repositories/auth_repository.dart';
 import '../../../../core/utils/validators.dart';
-import '../../../../core/erorr/failures.dart'; // مسار الفشل
+import '../../../../core/erorr/failures.dart';
 
 class SignUpUseCase {
   final AuthRepository _repository;

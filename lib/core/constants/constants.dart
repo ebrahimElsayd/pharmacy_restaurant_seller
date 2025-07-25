@@ -8,12 +8,26 @@ class Constants {
 
   static const noConnectionErrorMessage = 'Not connected to a network!';
 
-  static const String supabaseUrl = 'https://gwzvpnetxlpqpjsemttw.supabase.co';
-  static const String supabaseKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3enZwbmV0eGxwcXBqc2VtdHR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1NDMyNDMsImV4cCI6MjA0NzExOTI0M30.M_gXPVEvhH0z69l1VxMt7VwuybOZqQ2gAAnHC1ZMBn0';
+  static const String supabaseUrl = 'https://uarcwxukgtbnszsyxjgs.supabase.co';
+      static const String supabaseKey =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhcmN3eHVrZ3RibnN6c3l4amdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNzkyMjAsImV4cCI6MjA2ODk1NTIyMH0.e7A49x08SPH2qrIAsWlUUQPYzpzVhJYXH-DfPQmNRfw';
+  // static const String supabaseUrl = 'https://gwzvpnetxlpqpjsemttw.supabase.co';
+  // static const String supabaseKey =
+  //     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3enZwbmV0eGxwcXBqc2VtdHR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1NDMyNDMsImV4cCI6MjA0NzExOTI0M30.M_gXPVEvhH0z69l1VxMt7VwuybOZqQ2gAAnHC1ZMBn0';
 
 
-  // Auth Settings
+  // Storage Keys
+  static const String userDataKey = 'user_data';
+  static const String authTokenKey = 'auth_token';
+  static const String refreshTokenKey = 'refresh_token';
+  static const String isLoggedInKey = 'is_logged_in';
+  static const String rememberMeKey = 'remember_me';
+  static const String lastLoginTimeKey = 'last_login_time';
+  static const String sessionExpiryKey = 'session_expiry';
+  static const String loginAttemptsKey = 'login_attempts';
+  static const String lockoutTimeKey = 'lockout_time';
+
+  // Session Settings
   static const int sessionTimeoutMinutes = 30;
   static const int maxLoginAttempts = 3;
   static const int lockoutDurationMinutes = 15;

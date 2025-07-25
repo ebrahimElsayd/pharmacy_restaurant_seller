@@ -1,9 +1,15 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:pharmacy_restaurant_seller/core/constants/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/comman/app_router/app_router.dart';
+import 'core/theme/app_pallete.dart';
+import 'core/theme/font_weight_helper.dart';
+import 'core/theme/values_manager.dart';
+import 'features/auth/presentation/riverpods/auth_providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,12 +19,18 @@ void main() async {
     url: Constants.supabaseUrl,
     anonKey: Constants.supabaseKey,
   );
+  final sharedPreferences = await SharedPreferences.getInstance();
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      ],      child: const MyApp()
+  )
+  );
 }
 
 class MyApp extends ConsumerStatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   ConsumerState<MyApp> createState() => _MyAppState();
@@ -49,24 +61,55 @@ class _MyAppState extends ConsumerState<MyApp> {
     final router = ref.watch(appRouterProvider);
 
     return ScreenUtilInit(
-      designSize: const Size(360, 690), // الحجم اللي صممت عليه
+      designSize: const Size(375, 812), // ✅ تحديث حسب تصميمك
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp.router(
-          title: 'تطبيق إعادة تعيين كلمة المرور',
+          title: 'تطبيق البائع',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            primarySwatch: Colors.blue,
-            fontFamily: 'Arial', // يمكنك تغيير هذا حسب الخط المطلوب
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: AppPallete.primaryColor, // ✅ استخدام لونك الأساسي
+              brightness: Brightness.light,
+            ),
             appBarTheme: AppBarTheme(
-              backgroundColor: Colors.transparent,
+              backgroundColor: AppPallete.white, // ✅ استخدام ألوانك
               elevation: 0,
-              iconTheme: const IconThemeData(color: Colors.black),
+              centerTitle: true,
+              iconTheme: IconThemeData(color: AppPallete.blackForText),
               titleTextStyle: TextStyle(
-                color: Colors.black,
-                fontSize: 20.sp, // استخدام ScreenUtil للحجم
+                color: AppPallete.blackForText,
+                fontSize: FontSize.s20, // ✅ استخدام حجم الخط الخاص بك
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppPallete.primaryColor, // ✅ زر أساسي بلونك
+                foregroundColor: AppPallete.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: ValuesManager.paddingLarge,
+                  vertical: ValuesManager.paddingMedium,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+                ),
+              ),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+                borderSide: BorderSide(color: AppPallete.borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+                borderSide: BorderSide(color: AppPallete.primaryColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+                borderSide: BorderSide(color: AppPallete.borderColor),
               ),
             ),
           ),
@@ -77,7 +120,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 }
 
-// مثال على شاشة رئيسية للتأكد من أن ScreenUtil يعمل بشكل صحيح
+// مثال على شاشة رئيسية للتأكد من أن كل شيء يعمل
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -86,17 +129,40 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Responsive UI',
-          style: TextStyle(fontSize: 20.sp), // حجم الخط يتناسب مع الشاشة
+          'الشاشة الرئيسية',
+          style: TextStyle(fontSize: FontSize.s20),
         ),
       ),
       body: Center(
         child: Container(
-          width: 200.w, // العرض يتناسب مع الشاشة
-          height: 100.h, // الطول يتناسب مع الشاشة
-          color: Colors.amber,
-          alignment: Alignment.center,
-          child: Text('Hello!', style: TextStyle(fontSize: 24.sp)),
+          width: 200.w,
+          height: 100.h,
+          padding: EdgeInsets.all(ValuesManager.paddingMedium),
+          decoration: BoxDecoration(
+            color: AppPallete.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(ValuesManager.borderRadiusLarge),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'مرحباً بك!',
+                style: TextStyle(
+                  fontSize: FontSize.s24,
+                  fontWeight: FontWeight.bold,
+                  color: AppPallete.primaryColor,
+                ),
+              ),
+              SizedBox(height: ValuesManager.marginMedium),
+              Text(
+                'هذا تطبيق البائع',
+                style: TextStyle(
+                  fontSize: FontSize.s16,
+                  color: AppPallete.lightGreyForText,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -7,54 +7,39 @@ import '../../../features/auth/presentation/screens/signup_screen.dart';
 import '../../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../../features/auth/presentation/screens/email_verification_screen.dart';
 import '../../../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../features/orders/presentation/screens/orders_list_screen.dart';
 import '../../../features/auth/presentation/riverpods/auth_providers.dart';
 import '../../../features/auth/presentation/riverpods/auth_state.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final authNotifier = ref.watch(authNotifierProvider.notifier);
   final authState = ref.watch(authNotifierProvider);
 
   return GoRouter(
-    initialLocation: '/',
-    redirect: (context, state) {
-      final isLoggedIn = authState.state == AuthState.authenticated;
-      final isEmailVerified = authState.user?.isEmailVerified ?? false;
-      final needsEmailVerification = authState.state == AuthState.emailVerificationRequired;
-
-      final isOnAuthPage = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/signup' ||
-          state.matchedLocation == '/forgot-password' ||
-          state.matchedLocation.startsWith('/reset-password');
-
-      final isOnEmailVerificationPage = state.matchedLocation == '/email-verification';
-      final isOnDashboard = state.matchedLocation == '/dashboard';
-
-      // If user is authenticated and email is verified, redirect to dashboard
-      if (isLoggedIn && isEmailVerified && isOnAuthPage) {
-        return '/dashboard';
-      }
-
-      // If user needs email verification, redirect to verification page
-      if (needsEmailVerification && !isOnEmailVerificationPage) {
-        return '/email-verification';
-      }
-
-      // If user is not authenticated and trying to access protected routes
-      if (!isLoggedIn && isOnDashboard) {
-        return '/login';
-      }
-
-      // If user is not authenticated and not on auth pages, redirect to login
-      if (!isLoggedIn && !isOnAuthPage && !isOnEmailVerificationPage) {
-        return '/login';
-      }
-
-      return null; // No redirect needed
-    },
+    initialLocation: '/splash', // نبدأ بصفحة splash للتحقق من حالة المصادقة
+    redirect: (context, state) => _handleRedirect(authState, state),
     routes: [
+      // Splash Route - للتحقق من حالة المصادقة
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+
+      // Root Route
       GoRoute(
         path: '/',
-        redirect: (context, state) => '/login',
+        redirect: (context, state) => '/splash',
       ),
+
+      // Orders Route (للاختبار)
+      GoRoute(
+        path: '/orders',
+        name: 'orders',
+        builder: (context, state) => const OrdersListScreen(),
+      ),
+
+      // Auth Routes
       GoRoute(
         path: '/login',
         name: 'login',
@@ -83,12 +68,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'email-verification',
         builder: (context, state) => const EmailVerificationScreen(),
       ),
+
+      // Protected Routes
       GoRoute(
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const DashboardScreen(),
       ),
     ],
+
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(
@@ -111,3 +99,157 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+String? _handleRedirect(AuthStateData authState, GoRouterState state) {
+  final currentLocation = state.matchedLocation;
+  final isLoading = authState.state == AuthState.loading;
+  final isAuthenticated = authState.state == AuthState.authenticated;
+  final isRegistered = authState.state == AuthState.registrationSuccess;
+  final needsEmailVerification = authState.state == AuthState.emailVerificationRequired;
+  final isUnauthenticated = authState.state == AuthState.unauthenticated;
+
+  final publicRoutes = ['/login', '/signup', '/forgot-password', '/splash'];
+  final isOnPublicRoute = publicRoutes.contains(currentLocation) ||
+      currentLocation.startsWith('/reset-password');
+
+  final protectedRoutes = ['/dashboard', '/orders'];
+  final isOnProtectedRoute = protectedRoutes.any((route) => currentLocation.startsWith(route));
+
+  if (isLoading) {
+    if (currentLocation == '/splash') return null;
+    return '/splash';
+  }
+
+  if (isRegistered) {
+    return '/dashboard';
+  }
+
+  if (isAuthenticated) {
+    if (isOnPublicRoute) {
+      return '/dashboard';
+    }
+    return null;
+  }
+
+  if (needsEmailVerification) {
+    if (currentLocation != '/email-verification') {
+      return '/email-verification';
+    }
+    return null;
+  }
+
+  if (isUnauthenticated) {
+    if (isOnProtectedRoute || currentLocation == '/splash') {
+      return '/login';
+    }
+    return null;
+  }
+
+  return null;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// مؤقتا فقط
+// Splash Screen للتحقق من حالة المصادقة
+class SplashScreen extends ConsumerStatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // التحقق من حالة المصادقة عند بدء التطبيق
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authNotifierProvider.notifier).initializeAuth();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // شعار التطبيق
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Icon(
+                Icons.restaurant_menu,
+                size: 60,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // اسم التطبيق
+            Text(
+              'Restaurant Seller',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // مؤشر التحميل
+            if (authState.state == AuthState.loading) ...[
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Checking authentication...',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+
+            // رسالة خطأ إذا وجدت
+            if (authState.state == AuthState.error && authState.errorMessage != null) ...[
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                authState.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/login'),
+                child: const Text('Go to Login'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

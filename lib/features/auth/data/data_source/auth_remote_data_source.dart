@@ -51,8 +51,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }) async {
     try {
       final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
+        email: email.trim(),
+        password: password.trim(),
         data: {
           'full_name': fullName,
           if (phoneNumber != null) 'phone_number': phoneNumber,
@@ -73,11 +73,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           phoneNumber: phoneNumber,
         );
       } catch (e) {
-        // إذا فشل إنشاء ملف البائع، احذف المستخدم من Auth
-        print('[ERROR] Failed to create seller profile: $e');
-
         try {
-          await _supabase.auth.signOut(); // تنظيف الجلسة
+          await _supabase.auth.signOut();
         } catch (_) {}
 
         if (e is PostgrestException) {
@@ -101,13 +98,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         isActive: true,
       );
     } on AuthException catch (e) {
-      print('[AUTH_ERROR] ${e.message}');
       rethrow;
     } on PostgrestException catch (e) {
-      print('[DB_ERROR] ${e.message}');
       throw AuthException(_getErrorMessage(e.message));
     } catch (e) {
-      print('[UNKNOWN_ERROR] $e');
       throw const AuthException('حدث خطأ غير متوقع أثناء إنشاء الحساب');
     }
   }
@@ -307,23 +301,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         if (phoneNumber != null) 'phone_number': phoneNumber,
       };
 
-      print('[DEBUG] Creating seller profile with data: $sellerData');
-
       final response = await _supabase
           .from('sellers')
           .insert(sellerData)
           .select()
           .single();
 
-      print('[DEBUG] Seller profile created successfully: ${response['id']}');
-
     } on PostgrestException catch (e) {
-      print('[DB_ERROR] Failed to create seller profile: ${e.message}');
-      print('[DB_ERROR] Error code: ${e.code}');
-      print('[DB_ERROR] Error details: ${e.details}');
       rethrow;
     } catch (e) {
-      print('[ERROR] Unexpected error creating seller profile: $e');
       rethrow;
     }
   }

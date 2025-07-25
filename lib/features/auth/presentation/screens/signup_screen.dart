@@ -10,8 +10,6 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_password_field.dart';
 import '../widgets/custom_text_field.dart';
 
-// نفس الاستيرادات بدون تغيير...
-
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
@@ -29,7 +27,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
   bool _hasSetUpListener = false;
 
   @override
@@ -42,29 +39,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
-    print('[SIGNUP] 🚀 Starting SignUp process...');
+    // مسح الأخطاء السابقة
     ref.read(authNotifierProvider.notifier).clearError();
 
+    // التحقق من صحة النموذج أولاً
     if (!_formKey.currentState!.validate()) {
-      print('[SIGNUP] ❌ Form validation failed.');
-      return;
+      return; // لا تتابع إذا كان النموذج غير صحيح
     }
 
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    print('[SIGNUP] ✅ Form is valid.');
-    print('[SIGNUP] Name: $name');
-    print('[SIGNUP] Email: $email');
-    print('[SIGNUP] Password: $password');
+    // التحقق الإضافي من أن الحقول ليست فارغة
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showMessage('الرجاء ملء جميع الحقول المطلوبة', AppPallete.redColor);
+      return;
+    }
 
+    // تسجيل المستخدم
     await ref.read(authNotifierProvider.notifier).register(email, password, name);
-    print('[SIGNUP] 📤 Register method called.');
   }
 
   void _showMessage(String message, Color backgroundColor) {
-    print('[UI] 📣 Showing SnackBar: $message');
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -92,53 +89,61 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       ref.listen<AuthStateData>(authNotifierProvider, (previous, next) {
         if (!mounted) return;
 
-        print('[LISTENER] 🔄 AuthState changed: ${next.state}');
-        if (next.errorMessage != null) {
-          print('[LISTENER] ❗ Error: ${next.errorMessage}');
-        }
-
-        // معالجة الأخطاء أولاً
+        // معالجة الأخطاء
         if (next.state == AuthState.error && next.errorMessage != null) {
-          print('[LISTENER] 🛑 Displaying error message: ${next.errorMessage}');
           _showMessage(next.errorMessage!, AppPallete.redColor);
-          return; // إيقاف المعالجة هنا
+          return;
         }
 
-        // معالجة انتهاء عملية التسجيل الناجحة
-        final registrationJustFinished =
-            previous?.isRegisterLoading == true && !next.isRegisterLoading;
+        // معالجة انتهاء عملية التسجيل بنجاح فقط
+        final wasLoading = previous?.isRegisterLoading == true;
+        final isNotLoadingAnymore = !next.isRegisterLoading;
+        final registrationJustFinished = wasLoading && isNotLoadingAnymore;
 
+        // تأكد من أن التسجيل انتهى بنجاح وليس بخطأ
         if (registrationJustFinished && next.state != AuthState.error) {
-          print('[LISTENER] ✅ Registration just finished successfully.');
-
           switch (next.state) {
-            case AuthState.emailVerificationRequired:
-              print('[LISTENER] 📧 Email verification required.');
+            case AuthState.registrationSuccess:
               _showMessage(
-                'تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني للتفعيل.',
+                'تم إنشاء الحساب بنجاح! الرجاء تسجيل الدخول للمتابعة.',
                 AppPallete.greenColor,
               );
-              context.go('/email-verification');
+              // انتظار لإظهار الرسالة ثم الانتقال
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) {
+                  context.go('/login');
+                }
+              });
               break;
 
             case AuthState.authenticated:
-              print('[LISTENER] 🔐 Authenticated.');
               _showMessage('تم إنشاء الحساب وتسجيل الدخول بنجاح!', AppPallete.greenColor);
-              context.go('/dashboard');
+              Future.delayed(const Duration(seconds: 1), () {
+                if (mounted) {
+                  context.go('/dashboard');
+                }
+              });
               break;
 
-            case AuthState.registrationSuccess:
-              print('[LISTENER] 🎉 Registration success (no email verification).');
+            case AuthState.emailVerificationRequired:
               _showMessage(
-                'تم إنشاء الحساب! الرجاء تسجيل الدخول للمتابعة.',
-                AppPallete.greenColor,
+                'تم إنشاء الحساب! الرجاء التحقق من بريدك الإلكتروني.',
+                AppPallete.primaryColor,
               );
-              context.go('/login');
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) {
+                  context.go('/email-verification');
+                }
+              });
               break;
 
             default:
-              print('[LISTENER] ❓ Unexpected state: ${next.state}');
-              context.go('/login');
+            // في حالة عدم وضوح الحالة، اذهب للتسجيل
+              Future.delayed(const Duration(seconds: 1), () {
+                if (mounted) {
+                  context.go('/login');
+                }
+              });
           }
         }
       });
@@ -157,11 +162,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IconButton(
-                  onPressed: () => context.pop(),
+                  onPressed: isRegisterLoading ? null : () => context.pop(),
                   icon: const Icon(Icons.arrow_back_ios),
                   padding: EdgeInsets.zero,
                 ),
                 SizedBox(height: AppSize.s20),
+
                 Center(
                   child: Container(
                     width: 80,
@@ -178,6 +184,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                 ),
                 SizedBox(height: AppSize.s24),
+
                 const Center(
                   child: Text(
                     'Create Account',
@@ -189,6 +196,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                 ),
                 SizedBox(height: AppSize.s8),
+
                 const Center(
                   child: Text(
                     'Sign up to get started',
@@ -226,7 +234,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   keyboardType: TextInputType.emailAddress,
                   enabled: !isRegisterLoading,
                   validator: (value) {
-                    print('[VALIDATION] 📧 Email: $value');
                     return Validators.validateEmail(value);
                   },
                 ),
@@ -241,7 +248,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   enabled: !isRegisterLoading,
                   onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
                   validator: (v) {
-                    print('[VALIDATION] 🔑 Password: $v');
                     if (v == null || v.isEmpty) {
                       return 'Please enter a password';
                     }
@@ -262,7 +268,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   enabled: !isRegisterLoading,
                   onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                   validator: (v) {
-                    print('[VALIDATION] 🔐 Confirm Password: $v');
                     if (v == null || v.isEmpty) {
                       return 'Please confirm your password';
                     }

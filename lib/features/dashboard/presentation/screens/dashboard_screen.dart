@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pharmacy_restaurant_seller/features/orders/presentation/screens/orders_list_screen.dart';
 import '../../../../core/theme/app_pallete.dart';
 import '../../../auth/presentation/riverpods/auth_providers.dart';
 
@@ -133,7 +134,14 @@ class DashboardScreen extends ConsumerWidget {
                     Icons.shopping_bag,
                     AppPallete.primaryColor,
                         () {
-                      // Navigate to orders
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => OrdersListScreen(
+                              ), // <-- تمرير معرف الطلب
+                            ),
+                          );
                     },
                   ),
                   _buildActionCard(

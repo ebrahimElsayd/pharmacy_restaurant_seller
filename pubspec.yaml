@@ -59,6 +59,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   json_annotation: ^4.9.0
   shared_preferences: ^2.5.3
+  flutter_localization: ^0.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

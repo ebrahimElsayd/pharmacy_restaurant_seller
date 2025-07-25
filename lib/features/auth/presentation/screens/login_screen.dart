@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_pallete.dart';
 import '../../../../core/theme/values_manager.dart';
+import '../../../../core/utils/validators.dart';
 import '../riverpods/auth_providers.dart';
 import '../riverpods/auth_state.dart';
 import '../widgets/custom_button.dart';
@@ -72,26 +73,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Listen to auth state changes once
     if (!_isListening) {
+      // في LoginScreen - تحديث الاستماع للحالة
       ref.listen<AuthStateData>(authNotifierProvider, (previous, next) {
         if (!mounted) return;
 
         if (next.state == AuthState.authenticated &&
             previous?.isLoginLoading == true &&
-            !next.isLoginLoading &&
-            next.user?.isEmailVerified == true) {
+            !next.isLoginLoading) {
           _showMessage('Login successful!', AppPallete.greenColor);
           context.go('/dashboard');
         }
 
-        if (next.state == AuthState.emailVerificationRequired) {
-          _showMessage('Please verify your email address', AppPallete.primaryColor);
-          context.go('/email-verification');
-        }
+        // إزالة التحقق من التحقق من البريد الإلكتروني
+        /*
+  if (next.state == AuthState.emailVerificationRequired) {
+    _showMessage('Please verify your email address', AppPallete.primaryColor);
+    context.go('/email-verification');
+  }
+  */
 
         if (next.state == AuthState.error && next.errorMessage != null) {
           _showMessage(next.errorMessage!, AppPallete.redColor);
         }
       });
+
       _isListening = true;
     }
 
@@ -111,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppPallete.primaryColor.withOpacity(0.1),
+                    color: AppPallete.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Icon(
@@ -149,14 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   enabled: !isLoginLoading,
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value.trim())) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
+                    return Validators.validateEmail(value);
                   },
                 ),
                 SizedBox(height: AppSize.s20),
