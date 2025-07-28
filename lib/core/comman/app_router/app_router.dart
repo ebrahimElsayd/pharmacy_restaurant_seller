@@ -16,7 +16,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authNotifierProvider);
 
   return GoRouter(
-    initialLocation: '/splash', // نبدأ بصفحة splash للتحقق من حالة المصادقة
+    initialLocation: '/splash',
     redirect: (context, state) => _handleRedirect(authState, state),
     routes: [
       // Splash Route - للتحقق من حالة المصادقة
@@ -107,6 +107,7 @@ String? _handleRedirect(AuthStateData authState, GoRouterState state) {
   final isRegistered = authState.state == AuthState.registrationSuccess;
   final needsEmailVerification = authState.state == AuthState.emailVerificationRequired;
   final isUnauthenticated = authState.state == AuthState.unauthenticated;
+  final hasError = authState.state == AuthState.error;
 
   final publicRoutes = ['/login', '/signup', '/forgot-password', '/splash'];
   final isOnPublicRoute = publicRoutes.contains(currentLocation) ||
@@ -115,22 +116,34 @@ String? _handleRedirect(AuthStateData authState, GoRouterState state) {
   final protectedRoutes = ['/dashboard', '/orders'];
   final isOnProtectedRoute = protectedRoutes.any((route) => currentLocation.startsWith(route));
 
+  // إذا كان في حالة تحميل وليس في صفحة splash
   if (isLoading) {
     if (currentLocation == '/splash') return null;
     return '/splash';
   }
 
-  if (isRegistered) {
-    return '/dashboard';
+  // إذا كان هناك خطأ، لا تقم بأي redirect - دع الصفحة الحالية تتعامل مع الخطأ
+  if (hasError) {
+    return null;
   }
 
-  if (isAuthenticated) {
-    if (isOnPublicRoute) {
-      return '/dashboard';
+  // إذا تم التسجيل بنجاح ولكن لم يتم تسجيل الدخول التلقائي
+  if (isRegistered) {
+    if (currentLocation != '/login') {
+      return '/login';
     }
     return null;
   }
 
+  // إذا كان مصادق وفي صفحة عامة، انتقل للداشبورد
+  if (isAuthenticated) {
+    if (isOnPublicRoute) {
+      return '/dashboard';
+    }
+    return null; // دع المستخدم يبقى في الصفحة المحمية الحالية
+  }
+
+  // إذا كان يحتاج تحقق من البريد الإلكتروني
   if (needsEmailVerification) {
     if (currentLocation != '/email-verification') {
       return '/email-verification';
@@ -138,35 +151,17 @@ String? _handleRedirect(AuthStateData authState, GoRouterState state) {
     return null;
   }
 
+  // إذا كان غير مصادق وفي صفحة محمية أو splash
   if (isUnauthenticated) {
     if (isOnProtectedRoute || currentLocation == '/splash') {
       return '/login';
     }
-    return null;
+    return null; // دع المستخدم يبقى في الصفحة العامة الحالية
   }
 
   return null;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// مؤقتا فقط
 // Splash Screen للتحقق من حالة المصادقة
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});

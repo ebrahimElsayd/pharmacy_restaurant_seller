@@ -47,14 +47,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   Future<void> _updatePassword() async {
     if (_formKey.currentState!.validate()) {
-      if (widget.token == null || widget.token!.isEmpty) {
-        _showErrorSnackBar('Verification token is missing.');
-        return;
-      }
       try {
         await _authController.updatePassword(
           newPassword: _passwordController.text.trim(),
-          token: widget.token!,
+          token: '',
         );
       } catch (_) {
         /* handled in AuthController */
@@ -157,7 +153,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   ),
                   onPressed:
                       () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 validator: _validatePassword,
                 hintText: 'New Password',
@@ -176,8 +172,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   onPressed:
                       () => setState(
                         () =>
-                            _obscureConfirmPassword = !_obscureConfirmPassword,
-                      ),
+                    _obscureConfirmPassword = !_obscureConfirmPassword,
+                  ),
                 ),
                 validator: _validateConfirmPassword,
                 hintText: 'Confirm Password',

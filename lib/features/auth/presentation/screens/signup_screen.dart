@@ -28,6 +28,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _hasSetUpListener = false;
+  bool _hasNavigated = false; // إضافة flag لمنع التنقل المتكرر
 
   @override
   void dispose() {
@@ -39,25 +40,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
-    // مسح الأخطاء السابقة
     ref.read(authNotifierProvider.notifier).clearError();
 
-    // التحقق من صحة النموذج أولاً
     if (!_formKey.currentState!.validate()) {
-      return; // لا تتابع إذا كان النموذج غير صحيح
+      return;
     }
 
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // التحقق الإضافي من أن الحقول ليست فارغة
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
       _showMessage('الرجاء ملء جميع الحقول المطلوبة', AppPallete.redColor);
       return;
     }
 
-    // تسجيل المستخدم
     await ref.read(authNotifierProvider.notifier).register(email, password, name);
   }
 
@@ -87,42 +84,35 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     if (!_hasSetUpListener) {
       ref.listen<AuthStateData>(authNotifierProvider, (previous, next) {
-        if (!mounted) return;
+        if (!mounted || _hasNavigated) return;
 
-        // معالجة الأخطاء
+        // معالجة الأخطاء - البقاء في نفس الصفحة
         if (next.state == AuthState.error && next.errorMessage != null) {
           _showMessage(next.errorMessage!, AppPallete.redColor);
           return;
         }
 
-        // معالجة انتهاء عملية التسجيل بنجاح فقط
+        // التأكد من أن التسجيل انتهى (من loading إلى غير loading)
         final wasLoading = previous?.isRegisterLoading == true;
         final isNotLoadingAnymore = !next.isRegisterLoading;
         final registrationJustFinished = wasLoading && isNotLoadingAnymore;
 
-        // تأكد من أن التسجيل انتهى بنجاح وليس بخطأ
+        // التسجيل انتهى بنجاح وليس بخطأ
         if (registrationJustFinished && next.state != AuthState.error) {
+          _hasNavigated = true; // منع التنقل المتكرر
+
           switch (next.state) {
             case AuthState.registrationSuccess:
               _showMessage(
                 'تم إنشاء الحساب بنجاح! الرجاء تسجيل الدخول للمتابعة.',
                 AppPallete.greenColor,
               );
-              // انتظار لإظهار الرسالة ثم الانتقال
-              Future.delayed(const Duration(seconds: 2), () {
-                if (mounted) {
-                  context.go('/login');
-                }
-              });
+              // الـ router سيتولى التنقل تلقائياً
               break;
 
             case AuthState.authenticated:
               _showMessage('تم إنشاء الحساب وتسجيل الدخول بنجاح!', AppPallete.greenColor);
-              Future.delayed(const Duration(seconds: 1), () {
-                if (mounted) {
-                  context.go('/dashboard');
-                }
-              });
+              // الـ router سيتولى التنقل تلقائياً
               break;
 
             case AuthState.emailVerificationRequired:
@@ -130,20 +120,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 'تم إنشاء الحساب! الرجاء التحقق من بريدك الإلكتروني.',
                 AppPallete.primaryColor,
               );
-              Future.delayed(const Duration(seconds: 2), () {
-                if (mounted) {
-                  context.go('/email-verification');
-                }
-              });
+              // الـ router سيتولى التنقل تلقائياً
               break;
 
             default:
-            // في حالة عدم وضوح الحالة، اذهب للتسجيل
-              Future.delayed(const Duration(seconds: 1), () {
-                if (mounted) {
-                  context.go('/login');
-                }
-              });
+            // في الحالات الأخرى، دع الـ router يتولى التنقل
+              break;
           }
         }
       });
@@ -283,7 +265,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 CustomButton(
                   text: 'Create Account',
                   isLoading: isRegisterLoading,
-                  onPressed: isRegisterLoading ? null : _handleSignUp,
+                  onPressed: isRegisterLoading ? null : () {
+                    if (_formKey.currentState!.validate()) {
+                      _handleSignUp();
+                    }
+                  },
                 ),
                 SizedBox(height: AppSize.s24),
 

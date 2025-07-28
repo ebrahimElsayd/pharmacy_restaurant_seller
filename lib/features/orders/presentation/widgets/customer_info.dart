@@ -16,59 +16,173 @@ class CustomerInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(ValuesManager.paddingMedium),
+      padding: EdgeInsets.all(ValuesManager.paddingLarge),
       decoration: BoxDecoration(
         color: AppPallete.white,
         borderRadius: BorderRadius.circular(ValuesManager.borderRadiusLarge),
-        border: Border.all(color: AppPallete.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppPallete.primaryColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'معلومات العميل',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: FontSize.s18,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppPallete.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: AppPallete.primaryColor,
+                  size: 20.sp,
+                ),
+              ),
+              SizedBox(width: ValuesManager.marginMedium),
+              Text(
+                'Customer Information',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: FontSize.s18,
+                  color: AppPallete.blackForText,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: ValuesManager.paddingMedium),
-          ListTile(
-            leading: Container(
-              width: 48.w,
-              height: 48.h,
-              decoration: BoxDecoration(
-                color: AppPallete.primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person,
-                color: AppPallete.primaryColor,
-              ),
+          SizedBox(height: ValuesManager.paddingLarge),
+          Container(
+            padding: EdgeInsets.all(ValuesManager.paddingMedium),
+            decoration: BoxDecoration(
+              color: AppPallete.background,
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(color: AppPallete.borderColor.withOpacity(0.5)),
             ),
-            title: Text(
-              order.customerName,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            child: Row(
+              children: [
+                Container(
+                  width: 56.w,
+                  height: 56.h,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppPallete.primaryColor,
+                        AppPallete.primaryColor.withOpacity(0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: AppPallete.white,
+                    size: 28.sp,
+                  ),
+                ),
+                SizedBox(width: ValuesManager.marginMedium),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.customerName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: FontSize.s16,
+                          color: AppPallete.blackForText,
+                        ),
+                      ),
+                      if (order.customerPhone != null) ...[
+                        SizedBox(height: 4.h),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.phone_rounded,
+                              size: 16.sp,
+                              color: AppPallete.lightGreyForText,
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              order.customerPhone!,
+                              style: TextStyle(
+                                color: AppPallete.lightGreyForText,
+                                fontSize: FontSize.s14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppPallete.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    'VIP',
+                    style: TextStyle(
+                      color: AppPallete.primaryColor,
+                      fontSize: FontSize.s12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            subtitle: order.customerPhone != null
-                ? Text(order.customerPhone!)
-                : null,
           ),
           if (order.shippingAddress != null) ...[
-            const Divider(height: 24),
-            const Text(
-              'عنوان التوصيل',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: FontSize.s16,
+            SizedBox(height: ValuesManager.paddingMedium),
+            Container(
+              padding: EdgeInsets.all(ValuesManager.paddingMedium),
+              decoration: BoxDecoration(
+                color: AppPallete.background,
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: AppPallete.borderColor.withOpacity(0.5)),
               ),
-            ),
-            SizedBox(height: ValuesManager.marginSmall),
-            Text(
-              order.shippingAddress!,
-              style: const TextStyle(
-                color: AppPallete.lightGreyForText,
-                height: 1.5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        color: AppPallete.orangeColor,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: ValuesManager.marginSmall),
+                      Text(
+                        'Delivery Address',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: FontSize.s16,
+                          color: AppPallete.blackForText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: ValuesManager.marginSmall),
+                  Text(
+                    order.shippingAddress!,
+                    style: TextStyle(
+                      color: AppPallete.lightGreyForText,
+                      fontSize: FontSize.s14,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

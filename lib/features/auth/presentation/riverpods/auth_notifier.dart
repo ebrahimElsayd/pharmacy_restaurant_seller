@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../data/data_source/auth_local_datasource.dart';
+import '../../domain/usecases/forgot_password_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/reset_pass_usecase.dart';
@@ -15,6 +16,7 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
   final SignOutUseCase _signOutUseCase;
   final GetCurrentUserUseCase _getCurrentUserUseCase;
   final ResetPasswordUseCase _resetPasswordUseCase;
+  final ForgotPasswordUseCase _forgotPasswordUseCase;
   final AuthLocalDataSource _localDataSource;
 
   AuthNotifier({
@@ -23,12 +25,14 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     required SignOutUseCase signOutUseCase,
     required GetCurrentUserUseCase getCurrentUserUseCase,
     required ResetPasswordUseCase resetPasswordUseCase,
+    required ForgotPasswordUseCase forgotPasswordUseCase,
     required AuthLocalDataSource localDataSource,
   })  : _signInUseCase = signInUseCase,
         _signUpUseCase = signUpUseCase,
         _signOutUseCase = signOutUseCase,
         _getCurrentUserUseCase = getCurrentUserUseCase,
         _resetPasswordUseCase = resetPasswordUseCase,
+        _forgotPasswordUseCase = forgotPasswordUseCase,
         _localDataSource = localDataSource,
         super(const AuthStateData());
 
@@ -76,23 +80,6 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
             user: user,
             clearError: true,
           );
-
-          // إذا كنت تريد إعادة تفعيل التحقق لاحقاً، استخدم هذا الكود:
-          /*
-        if (!user.isEmailVerified) {
-          state = state.copyWith(
-            state: AuthState.emailVerificationRequired,
-            user: user,
-            clearError: true,
-          );
-        } else {
-          state = state.copyWith(
-            state: AuthState.authenticated,
-            user: user,
-            clearError: true,
-          );
-        }
-        */
         },
       );
     } catch (e) {
@@ -104,7 +91,7 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     }
   }
 
-// في دالة _checkAuthStatus
+  // في دالة _checkAuthStatus
   Future<void> _checkAuthStatus() async {
     final result = await _getCurrentUserUseCase();
 
@@ -121,89 +108,85 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
           user: user,
           clearError: true,
         );
-
-        // إذا كنت تريد إعادة تفعيل التحقق لاحقاً، استخدم هذا الكود:
-        /*
-      if (!user.isEmailVerified) {
-        state = state.copyWith(
-          state: AuthState.emailVerificationRequired,
-          user: user,
-          clearError: true,
-        );
-      } else {
-        state = state.copyWith(
-          state: AuthState.authenticated,
-          user: user,
-          clearError: true,
-        );
-      }
-      */
       },
     );
   }
 
-// في auth_notifier.dart - الدالة المحدثة للتسجيل
+  // دالة التسجيل المحدثة - هذا هو الجزء المهم
   Future<void> register(
       String email,
       String password,
       String fullName, {
         String? phoneNumber,
       }) async {
-
     // بدء حالة التحميل
     state = state.copyWith(
       isRegisterLoading: true,
       clearError: true,
     );
 
-    final result = await _signUpUseCase(SignUpParams(
-      email: email,
-      password: password,
-      fullName: fullName,
-      phoneNumber: phoneNumber,
-    ));
+    try {
+      final result = await _signUpUseCase(SignUpParams(
+        email: email,
+        password: password,
+        fullName: fullName,
+        phoneNumber: phoneNumber,
+      ));
 
-    result.fold(
-          (failure) {
-        // في حالة الفشل
-        state = state.copyWith(
-          state: AuthState.error,
-          errorMessage: failure.message,
-          isRegisterLoading: false,
-        );
-      },
-          (_) {
-        // في حالة النجاح - تحديث الحالة أولاً
-        state = state.copyWith(
-          state: AuthState.registrationSuccess,
-          isRegisterLoading: false,
-          clearError: true,
-        );
-
-        // ثم محاولة الحصول على بيانات المستخدم
-        _getCurrentUserUseCase().then((userResult) {
-          userResult.fold(
-                (failure) {
-              // إذا فشل في الحصول على المستخدم، احتفظ بحالة registrationSuccess
-              // لأن التسجيل نجح على أي حال
-            },
-                (user) {
-              // إذا نجح في الحصول على بيانات المستخدم
-              state = state.copyWith(
-                user: user,
-                // احتفظ بـ registrationSuccess بدلاً من تغييرها
-                state: AuthState.registrationSuccess,
-              );
-            },
+      result.fold(
+            (failure) {
+          // في حالة الفشل - البقاء في نفس الصفحة مع إظهار الخطأ
+          state = state.copyWith(
+            state: AuthState.error,
+            errorMessage: failure.message,
+            isRegisterLoading: false,
           );
-        }).catchError((error) {
-          // في حالة حدوث خطأ غير متوقع، احتفظ بحالة النجاح
-          // لأن التسجيل نفسه نجح
-        });
-      },
-    );
-  }
+        },
+            (_) async {
+          // في حالة النجاح - محاولة تسجيل الدخول التلقائي
+          try {
+            final loginResult = await _signInUseCase(SignInParams(
+              email: email,
+              password: password,
+            ));
 
+            loginResult.fold(
+                  (loginFailure) {
+                // فشل في تسجيل الدخول التلقائي - إرسال المستخدم لصفحة تسجيل الدخول
+                state = state.copyWith(
+                  state: AuthState.registrationSuccess,
+                  isRegisterLoading: false,
+                  clearError: true,
+                );
+              },
+                  (_) async {
+                // نجح في تسجيل الدخول التلقائي - الذهاب مباشرة للداشبورد
+                await _checkAuthStatus();
+                state = state.copyWith(
+                  isRegisterLoading: false,
+                );
+              },
+            );
+          } catch (e) {
+            // خطأ في تسجيل الدخول التلقائي - إرسال المستخدم لصفحة تسجيل الدخول
+            state = state.copyWith(
+              state: AuthState.registrationSuccess,
+              isRegisterLoading: false,
+              clearError: true,
+            );
+          }
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        state: AuthState.error,
+        errorMessage: e.toString(),
+        isRegisterLoading: false,
+      );
+    }
+
+    print("🏁 DEBUG AUTH_NOTIFIER: Register method completed");
+  }
 
   Future<void> login(String email, String password, {bool rememberMe = false}) async {
     state = state.copyWith(
@@ -232,54 +215,6 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     );
   }
 
-  // Future<void> register(
-  //     String email,
-  //     String password,
-  //     String fullName, {
-  //       String? phoneNumber,
-  //     }) async {
-  //   state = state.copyWith(
-  //     isRegisterLoading: true,
-  //     clearError: true,
-  //   );
-  //
-  //   final result = await _signUpUseCase(SignUpParams(
-  //     email: email,
-  //     password: password,
-  //     fullName: fullName,
-  //     phoneNumber: phoneNumber,
-  //   ));
-  //
-  //   result.fold(
-  //         (failure) {
-  //       state = state.copyWith(
-  //         state: AuthState.error,
-  //         errorMessage: failure.message,
-  //         isRegisterLoading: false,
-  //       );
-  //     },
-  //         (_) {
-  //       state = state.copyWith(
-  //         state: AuthState.emailVerificationRequired,
-  //         isRegisterLoading: false,
-  //         clearError: true,
-  //       );
-  //
-  //       _getCurrentUserUseCase().then((result) {
-  //         result.fold(
-  //               (failure) {},
-  //               (user) {
-  //             state = state.copyWith(
-  //               user: user,
-  //               state: AuthState.emailVerificationRequired,
-  //             );
-  //           },
-  //         );
-  //       });
-  //     },
-  //   );
-  // }
-
   Future<void> signOut() async {
     state = state.copyWith(state: AuthState.loading);
 
@@ -304,7 +239,7 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
       clearError: true,
     );
 
-    final result = await _resetPasswordUseCase(ResetPasswordParams(email: email));
+    final result = await _forgotPasswordUseCase(ForgotPasswordParams(email: email));
 
     result.fold(
           (failure) => state = state.copyWith(
@@ -321,30 +256,27 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     );
   }
 
-  Future<void> updatePassword(String newPassword, String token) async {
+  Future<void> updatePassword(String newPassword) async {
     state = state.copyWith(
       isResetPasswordLoading: true,
       clearError: true,
     );
 
     try {
-      final response = await Supabase.instance.client.auth.updateUser(
-          UserAttributes(password: newPassword)
-      );
+      final result = await _resetPasswordUseCase.repository.updatePassword(newPassword: newPassword);
 
-      if (response.user != null) {
-        state = state.copyWith(
+      result.fold(
+            (failure) => state = state.copyWith(
+          state: AuthState.error,
+          errorMessage: failure.message,
+          isResetPasswordLoading: false,
+        ),
+            (_) => state = state.copyWith(
           state: AuthState.authenticated,
           isResetPasswordLoading: false,
           clearError: true,
-        );
-      } else {
-        state = state.copyWith(
-          state: AuthState.error,
-          errorMessage: 'Failed to update password',
-          isResetPasswordLoading: false,
-        );
-      }
+        ),
+      );
     } catch (e) {
       state = state.copyWith(
         state: AuthState.error,
@@ -363,34 +295,6 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
       state = state.copyWith(state: AuthState.unauthenticated);
     }
   }
-
-  // /// التحقق من حالة المصادقة
-  // Future<void> _checkAuthStatus() async {
-  //   final result = await _getCurrentUserUseCase();
-  //
-  //   result.fold(
-  //         (failure) => state = state.copyWith(
-  //       state: AuthState.unauthenticated,
-  //       clearUser: true,
-  //       clearError: true,
-  //     ),
-  //         (user) {
-  //       if (!user.isEmailVerified) {
-  //         state = state.copyWith(
-  //           state: AuthState.emailVerificationRequired,
-  //           user: user,
-  //           clearError: true,
-  //         );
-  //       } else {
-  //         state = state.copyWith(
-  //           state: AuthState.authenticated,
-  //           user: user,
-  //           clearError: true,
-  //         );
-  //       }
-  //     },
-  //   );
-  // }
 
   /// تحديث الجلسة
   Future<void> refreshSession() async {

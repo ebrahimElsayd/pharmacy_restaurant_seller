@@ -20,3 +20,7 @@ final authStateProvider = StreamProvider((ref) {
 final currentUserProvider = Provider((ref) {
   return ref.read(supabaseAuthProvider).currentUser;
 });
+
+final supabaseClientProvider = Provider<SupabaseClient>((ref) {
+  return Supabase.instance.client;
+});

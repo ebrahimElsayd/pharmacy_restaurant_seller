@@ -39,9 +39,9 @@ class AuthController {
 
   Future<void> updatePassword({
     required String newPassword,
-    required String token,
+    String token = '',
   }) async {
-    await ref.read(authNotifierProvider.notifier).updatePassword(newPassword, token);
+    await ref.read(authNotifierProvider.notifier).updatePassword(newPassword);
   }
 
   Future<void> signOut() async {

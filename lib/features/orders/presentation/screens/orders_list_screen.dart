@@ -16,7 +16,6 @@ import '../widgets/orders_filters.dart';
 import '../widgets/search_bar.dart';
 import 'order_details_screen.dart';
 
-// ... imports ...
 
 class OrdersListScreen extends ConsumerWidget {
   const OrdersListScreen({super.key});
@@ -31,22 +30,26 @@ class OrdersListScreen extends ConsumerWidget {
 
     final ordersState = ref.watch(ordersNotifierProvider);
 
-    return Scaffold(
-      appBar: _buildAppBar(context, ref),
-      body: Column(
-        children: [
-          OrdersSearchBar(onSearch: () {
-            // Trigger refresh when search is submitted (handled by notifier now)
-            ref.read(ordersNotifierProvider.notifier).filterOrders();
-          }),
-          const OrdersFilters(), // This handles setting filters via notifier
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => _refreshOrders(ref), // This will now respect filters
-              child: _buildContent(ordersState, ref, context),
+    return GestureDetector(
+      // Unfocus any text field when tapping elsewhere on the screen
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        appBar: _buildAppBar(context, ref),
+        body: Column(
+          children: [
+            OrdersSearchBar(onSearch: () {
+              // Trigger refresh when search is submitted (handled by notifier now)
+              ref.read(ordersNotifierProvider.notifier).filterOrders();
+            }),
+            const OrdersFilters(), // This handles setting filters via notifier
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => _refreshOrders(ref), // This will now respect filters
+                child: _buildContent(ordersState, ref, context),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

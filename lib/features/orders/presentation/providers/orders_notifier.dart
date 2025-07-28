@@ -124,9 +124,15 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
     await _fetchOrders(offset: 0);
   }
 
-  // Optional: Method to explicitly clear search and refresh if needed by other UI parts
+  // Method to explicitly clear search and refresh to show all orders
   Future<void> clearSearchAndRefresh() async {
+    // Make sure search query is cleared in filter state
     ref.read(ordersFilterNotifierProvider.notifier).setSearchQuery(null);
+
+    // We need to ensure the state is properly reset before fetching orders
+    state = OrdersState.initial();
+
+    // Now fetch all orders with no search query
     await _fetchOrders(offset: 0);
   }
 }

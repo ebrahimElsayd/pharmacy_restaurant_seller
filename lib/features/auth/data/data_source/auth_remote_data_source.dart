@@ -49,6 +49,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String fullName,
     String? phoneNumber,
   }) async {
+
     try {
       final response = await _supabase.auth.signUp(
         email: email.trim(),
@@ -75,7 +76,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       } catch (e) {
         try {
           await _supabase.auth.signOut();
-        } catch (_) {}
+        } catch (signOutError) {
+        }
 
         if (e is PostgrestException) {
           if (e.message.contains('row-level security')) {
@@ -87,7 +89,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw const AuthException('فشل في إنشاء الملف الشخصي');
       }
 
-      return UserModel(
+      final userModel = UserModel(
         id: user.id,
         email: email,
         fullName: fullName,
@@ -97,6 +99,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         updatedAt: user.updatedAt != null ? DateTime.parse(user.updatedAt!) : null,
         isActive: true,
       );
+      return userModel;
     } on AuthException catch (e) {
       rethrow;
     } on PostgrestException catch (e) {
@@ -176,7 +179,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       await _supabase.auth.resetPasswordForEmail(
         email,
-        // redirectTo: Constants.resetPasswordRedirectUrl,
+        redirectTo: 'io.supabase.myapp://reset-password/',
       );
     } catch (e) {
       throw AuthException('فشل في إرسال رابط استعادة كلمة المرور');
@@ -301,11 +304,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         if (phoneNumber != null) 'phone_number': phoneNumber,
       };
 
-      final response = await _supabase
-          .from('sellers')
-          .insert(sellerData)
-          .select()
-          .single();
+      try {
+        final response = await _supabase
+            .from('sellers')
+            .insert(sellerData)
+            .select()
+            .single();
+      } catch (postgrestError) {
+
+        // Let's try to log more detailed information about the table
+          final tables = await _supabase.rpc('get_tables');
+
+        rethrow;
+      }
 
     } on PostgrestException catch (e) {
       rethrow;

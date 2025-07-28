@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +33,7 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text(
-        'فلاتر متقدمة',
+        'Advanced Filters',
         style: TextStyle(
           fontSize: FontSize.s18,
           fontWeight: FontWeight.bold,
@@ -62,14 +61,14 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
             notifier.clearFilters();
             Navigator.of(context).pop();
           },
-          child: const Text('مسح الكل'),
+          child: const Text('Clear All'),
         ),
         ElevatedButton(
           onPressed: _applyFilters,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppPallete.primaryColor,
           ),
-          child: const Text('تطبيق'),
+          child: const Text('Apply'),
         ),
       ],
     );
@@ -77,20 +76,20 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
 
   Widget _buildStatusFilter() {
     final statuses = [
-      {'value': null, 'label': 'جميع الحالات'},
-      {'value': 'pending', 'label': 'قيد الانتظار'},
-      {'value': 'processing', 'label': 'قيد التجهيز'},
-      {'value': 'shipped', 'label': 'تم الشحن'},
-      {'value': 'delivered', 'label': 'تم التوصيل'},
-      {'value': 'cancelled', 'label': 'ملغي'},
-      {'value': 'returned', 'label': 'مُرجع'},
+      {'value': null, 'label': 'All Status'},
+      {'value': 'pending', 'label': 'Pending'},
+      {'value': 'processing', 'label': 'Processing'},
+      {'value': 'shipped', 'label': 'Shipped'},
+      {'value': 'delivered', 'label': 'Delivered'},
+      {'value': 'cancelled', 'label': 'Cancelled'},
+      {'value': 'returned', 'label': 'Returned'},
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'حالة الطلب',
+          'Order Status',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: FontSize.s16,
@@ -126,7 +125,7 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'نطاق التاريخ',
+          'Date Range',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: FontSize.s16,
@@ -139,18 +138,18 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
               child: _DateButton(
                 label: _startDate != null
                     ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'
-                    : 'من تاريخ',
+                    : 'From Date',
                 onTap: () => _pickDate(true),
               ),
             ),
             SizedBox(width: ValuesManager.marginSmall),
-            const Text('إلى'),
+            const Text('to'),
             SizedBox(width: ValuesManager.marginSmall),
             Expanded(
               child: _DateButton(
                 label: _endDate != null
                     ? '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
-                    : 'إلى تاريخ',
+                    : 'To Date',
                 onTap: () => _pickDate(false),
               ),
             ),
@@ -165,7 +164,7 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'بحث في الطلبات',
+          'Search Orders',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: FontSize.s16,
@@ -175,7 +174,7 @@ class _AdvancedFiltersDialogState extends ConsumerState<AdvancedFiltersDialog> {
         TextField(
           controller: TextEditingController(text: _searchQuery),
           decoration: InputDecoration(
-            hintText: 'ابحث برقم الطلب أو اسم العميل',
+            hintText: 'Search by order number or customer name',
             border: const OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(
               horizontal: ValuesManager.paddingMedium,

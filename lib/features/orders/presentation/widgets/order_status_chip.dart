@@ -24,25 +24,32 @@ class OrderStatusChip extends StatelessWidget {
         vertical: ValuesManager.paddingSmall,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(24.r),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 14.sp,
+            size: 16.sp,
             color: color,
           ),
-          SizedBox(width: ValuesManager.marginSmall / 2),
+          SizedBox(width: ValuesManager.marginSmall),
           Text(
             text,
             style: TextStyle(
               color: color,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -51,19 +58,19 @@ class OrderStatusChip extends StatelessWidget {
   }
 
   (Color, IconData) _getStatusInfo(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'pending':
-        return (AppPallete.orangeColor, Icons.access_time);
+        return (AppPallete.pending, Icons.access_time);
       case 'processing':
-        return (AppPallete.blueColor, Icons.build);
+        return (AppPallete.processing, Icons.build);
       case 'shipped':
-        return (AppPallete.primaryColor, Icons.local_shipping);
+        return (AppPallete.shipped, Icons.local_shipping);
       case 'delivered':
-        return (AppPallete.greenColor, Icons.check_circle);
+        return (AppPallete.delivered, Icons.check_circle);
       case 'cancelled':
         return (AppPallete.redColor, Icons.cancel);
       case 'returned':
-        return (AppPallete.greyColor, Icons.replay);
+        return (AppPallete.orangeColor, Icons.replay);
       default:
         return (AppPallete.lightGreyForText, Icons.help);
     }

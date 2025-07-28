@@ -29,11 +29,11 @@ class AuthRepositoryImpl implements AuthRepository {
     required String fullName,
     String? phoneNumber,
   }) async {
+
     try {
       if (!await _isNetworkAvailable()) {
         return Left(NetworkFailure.noInternet());
       }
-
       final user = await _remoteDataSource.signUp(
         email: email,
         password: password,
@@ -41,12 +41,10 @@ class AuthRepositoryImpl implements AuthRepository {
         phoneNumber: phoneNumber,
       );
 
-      if (user != null) {
-        await _cacheUserData(user);
-        await _localDataSource.saveIsLoggedIn(true);
-        await _localDataSource.saveLastLoginTime(DateTime.now());
-        await _saveSessionExpiry();
-      }
+      await _cacheUserData(user);
+      await _localDataSource.saveIsLoggedIn(true);
+      await _localDataSource.saveLastLoginTime(DateTime.now());
+      await _saveSessionExpiry();
 
       return const Right(unit);
     } on AuthException catch (e) {
@@ -73,13 +71,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final user = await _remoteDataSource.signIn(email: email, password: password);
 
-      if (user != null) {
-        await _cacheUserData(user);
-        await _localDataSource.saveIsLoggedIn(true);
-        await _localDataSource.saveLastLoginTime(DateTime.now());
-        await _saveSessionExpiry();
-        await _clearLockoutData();
-      }
+      await _cacheUserData(user);
+      await _localDataSource.saveIsLoggedIn(true);
+      await _localDataSource.saveLastLoginTime(DateTime.now());
+      await _saveSessionExpiry();
+      await _clearLockoutData();
 
       return const Right(unit);
     } on AuthException catch (e) {

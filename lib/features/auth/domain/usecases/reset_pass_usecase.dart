@@ -9,6 +9,8 @@ class ResetPasswordUseCase {
 
   ResetPasswordUseCase(this._repository);
 
+  AuthRepository get repository => _repository;
+
   Future<Either<Failure, void>> call(ResetPasswordParams params) async {
     // Validate email
     final emailValidation = Validators.validateEmail(params.email);

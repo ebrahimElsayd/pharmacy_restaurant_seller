@@ -1,226 +1,223 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:pharmacy_restaurant_seller/features/orders/presentation/screens/orders_list_screen.dart';
 import '../../../../core/theme/app_pallete.dart';
+import '../../../../core/theme/font_weight_helper.dart';
+import '../../../../core/theme/values_manager.dart';
 import '../../../auth/presentation/riverpods/auth_providers.dart';
+import '../riverpods/dashboard_notifier.dart';
+import '../widgets/chart_widget.dart';
+import '../widgets/quick_actions.dart';
+import '../widgets/stats_card.dart';
+import '../widgets/top_products.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authNotifierProvider);
-    final user = authState.user;
-
+    final dashboardState = ref.watch(dashboardNotifierProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        backgroundColor: AppPallete.primaryColor,
-        foregroundColor: AppPallete.whiteColor,
-        actions: [
-          PopupMenuButton(
-            icon: const Icon(Icons.account_circle),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text('Profile'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Navigate to profile
-                  },
+      backgroundColor: AppPallete.background,
+      appBar: _buildAppBar(context),
+      body: RefreshIndicator(
+        onRefresh: () => _refreshDashboard(ref),
+        color: AppPallete.primaryColor,
+        backgroundColor: AppPallete.white,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(ValuesManager.paddingMedium),
+          child: Column(
+            children: [
+              // Welcome Card
+              _buildWelcomeCard(),
+              SizedBox(height: ValuesManager.marginLarge),
+
+              // Stats Cards
+              DashboardStatsCard(
+                stats: dashboardState.stats,
+                isLoading: dashboardState.isLoadingStats,
+                error: dashboardState.statsError,
+                onRetry: () => ref.read(dashboardNotifierProvider.notifier).retryStats(),
+              ),
+              SizedBox(height: ValuesManager.marginLarge),
+
+              // Chart Widget
+              OrdersChartWidget(
+                chartData: dashboardState.chartData,
+                isLoading: dashboardState.isLoadingChart,
+                error: dashboardState.chartError,
+                onRetry: () => ref.read(dashboardNotifierProvider.notifier).retryChart(),
+              ),
+              SizedBox(height: ValuesManager.marginLarge),
+
+              // Top Products
+              TopProductsWidget(
+                products: dashboardState.topProducts,
+                isLoading: dashboardState.isLoadingProducts,
+                error: dashboardState.productsError,
+                onRetry: () => ref.read(dashboardNotifierProvider.notifier).retryProducts(),
+              ),
+              SizedBox(height: ValuesManager.marginLarge),
+
+              // Quick Actions
+              const QuickActions(),
+              SizedBox(height: ValuesManager.marginLarge),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(ValuesManager.paddingLarge),
+      decoration: BoxDecoration(
+        gradient: AppPallete.primaryGradient,
+        borderRadius: BorderRadius.circular(ValuesManager.borderRadiusLarge),
+        boxShadow: [
+          BoxShadow(
+            color: AppPallete.primaryColor.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(ValuesManager.paddingSmall),
+                decoration: BoxDecoration(
+                  color: AppPallete.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+                ),
+                child: const Icon(
+                  Icons.dashboard,
+                  color: AppPallete.white,
+                  size: 24,
                 ),
               ),
-              PopupMenuItem(
-                child: ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Settings'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Navigate to settings
-                  },
-                ),
-              ),
-              PopupMenuItem(
-                child: ListTile(
-                  leading: const Icon(Icons.logout),
-                  title: const Text('Logout'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await ref.read(authNotifierProvider.notifier).signOut();
-                    if (context.mounted) {
-                      context.go('/login');
-                    }
-                  },
+              SizedBox(width: ValuesManager.marginMedium),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome',
+                      style: TextStyle(
+                        color: AppPallete.white,
+                        fontSize: FontSize.s16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      'Dashboard',
+                      style: TextStyle(
+                        color: AppPallete.white,
+                        fontSize: FontSize.s24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPallete.primaryColor,
-                    AppPallete.primaryColor.withValues(alpha: 0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Welcome to Dashboard!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppPallete.whiteColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Hello, ${user?.fullName ?? 'User'}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: AppPallete.whiteColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user?.email ?? '',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppPallete.whiteColor.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Quick actions
-            const Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppPallete.blackForText,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Action cards
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _buildActionCard(
-                    'Orders',
-                    Icons.shopping_bag,
-                    AppPallete.primaryColor,
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => OrdersListScreen(
-                              ), // <-- تمرير معرف الطلب
-                            ),
-                          );
-                    },
-                  ),
-                  _buildActionCard(
-                    'Products',
-                    Icons.inventory,
-                    Colors.green,
-                        () {
-                      // Navigate to products
-                    },
-                  ),
-                  _buildActionCard(
-                    'Analytics',
-                    Icons.analytics,
-                    Colors.orange,
-                        () {
-                      // Navigate to analytics
-                    },
-                  ),
-                  _buildActionCard(
-                    'Settings',
-                    Icons.settings,
-                    Colors.purple,
-                        () {
-                      // Navigate to settings
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildActionCard(
-      String title,
-      IconData icon,
-      Color color,
-      VoidCallback onTap,
-      ) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+  AppBar _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: const Text(
+        'Store',
+        style: TextStyle(
+          fontSize: FontSize.s20,
+          fontWeight: FontWeight.bold,
+          color: AppPallete.blackForText,
+        ),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppPallete.blackForText,
-                ),
+      centerTitle: false,
+      elevation: 0,
+      backgroundColor: AppPallete.background,
+      actions: [
+        Container(
+          margin: EdgeInsets.only(right: ValuesManager.marginSmall),
+          decoration: BoxDecoration(
+            color: AppPallete.white,
+            borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
+          child: IconButton(
+            onPressed: () => _openNotifications(context),
+            icon: Stack(
+              children: [
+                const Icon(
+                  Icons.notifications_none,
+                  color: AppPallete.darkGreyForText,
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppPallete.redColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+        Container(
+          margin: EdgeInsets.symmetric(horizontal: ValuesManager.marginSmall),
+          decoration: BoxDecoration(
+            color: AppPallete.white,
+            borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed: () => _openSettings(context),
+            icon: const Icon(
+              Icons.settings,
+              color: AppPallete.darkGreyForText,
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _refreshDashboard(WidgetRef ref) async {
+    await ref.read(dashboardNotifierProvider.notifier).refresh();
+  }
+
+  void _openNotifications(BuildContext context) {
+    // Open notifications screen
+    print('Open notifications');
+  }
+
+  void _openSettings(BuildContext context) {
+    // Open settings screen
+    print('Open settings');
   }
 }

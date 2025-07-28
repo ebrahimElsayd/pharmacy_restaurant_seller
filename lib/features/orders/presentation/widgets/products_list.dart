@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_pallete.dart';
@@ -17,32 +16,86 @@ class ProductsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(ValuesManager.paddingMedium),
+      padding: EdgeInsets.all(ValuesManager.paddingLarge),
       decoration: BoxDecoration(
         color: AppPallete.white,
         borderRadius: BorderRadius.circular(ValuesManager.borderRadiusLarge),
-        border: Border.all(color: AppPallete.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppPallete.primaryColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'المنتجات',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: FontSize.s18,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppPallete.orangeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.inventory_2_rounded,
+                  color: AppPallete.orangeColor,
+                  size: 20.sp,
+                ),
+              ),
+              SizedBox(width: ValuesManager.marginMedium),
+              Text(
+                'Products',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: FontSize.s18,
+                  color: AppPallete.blackForText,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.w,
+                  vertical: 6.h,
+                ),
+                decoration: BoxDecoration(
+                  color: AppPallete.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  '${items.length} items',
+                  style: TextStyle(
+                    color: AppPallete.primaryColor,
+                    fontSize: FontSize.s12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: ValuesManager.paddingMedium),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => Divider(height: ValuesManager.marginMedium),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return _ProductItem(item: item);
-            },
+          SizedBox(height: ValuesManager.paddingLarge),
+          Container(
+            decoration: BoxDecoration(
+              color: AppPallete.background,
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(ValuesManager.paddingMedium),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => Container(
+                margin: EdgeInsets.symmetric(vertical: ValuesManager.marginSmall),
+                height: 1.h,
+                color: AppPallete.borderColor.withOpacity(0.5),
+              ),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return _ProductItem(item: item);
+              },
+            ),
           ),
         ],
       ),
@@ -57,57 +110,129 @@ class _ProductItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 60.w,
-          height: 60.h,
-          decoration: BoxDecoration(
-            color: AppPallete.borderColor,
-            borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
-            border: Border.all(color: AppPallete.borderColor),
+    return Container(
+      padding: EdgeInsets.all(ValuesManager.paddingMedium),
+      decoration: BoxDecoration(
+        color: AppPallete.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppPallete.borderColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64.w,
+            height: 64.h,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppPallete.primaryColor.withOpacity(0.1),
+                  AppPallete.primaryColor.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: AppPallete.primaryColor.withOpacity(0.2)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${item.quantity}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: FontSize.s18,
+                    color: AppPallete.primaryColor,
+                  ),
+                ),
+                Text(
+                  'QTY',
+                  style: TextStyle(
+                    fontSize: FontSize.s8,
+                    color: AppPallete.primaryColor.withOpacity(0.7),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Center(
+          SizedBox(width: ValuesManager.marginMedium),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.productName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: FontSize.s16,
+                    color: AppPallete.blackForText,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 6.h),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppPallete.greenColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Text(
+                        '\$${item.productPrice.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: AppPallete.greenColor,
+                          fontSize: FontSize.s12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      '× ${item.quantity}',
+                      style: TextStyle(
+                        color: AppPallete.lightGreyForText,
+                        fontSize: FontSize.s12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: 12.w,
+              vertical: 8.h,
+            ),
+            decoration: BoxDecoration(
+              color: AppPallete.primaryColor,
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppPallete.primaryColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Text(
-              '${item.quantity}',
-              style: const TextStyle(
+              '\$${item.totalPrice.toStringAsFixed(2)}',
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: FontSize.s16,
+                fontSize: FontSize.s14,
+                color: AppPallete.white,
               ),
             ),
           ),
-        ),
-        SizedBox(width: ValuesManager.marginMedium),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.productName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: ValuesManager.marginSmall / 2),
-              Text(
-                '${item.productPrice.toStringAsFixed(2)} ر.س × ${item.quantity}',
-                style: const TextStyle(
-                  color: AppPallete.lightGreyForText,
-                  fontSize: FontSize.s12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Text(
-          '${item.totalPrice.toStringAsFixed(2)} ر.س',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

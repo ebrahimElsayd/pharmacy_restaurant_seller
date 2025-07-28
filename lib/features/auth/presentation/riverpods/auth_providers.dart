@@ -14,6 +14,7 @@ import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/reset_pass_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
+import '../../domain/usecases/forgot_password_usecase.dart';
 import '../../../../core/providers/supabase_provider.dart';
 import 'auth_notifier.dart';
 import 'auth_state.dart';
@@ -82,6 +83,10 @@ final resetPasswordUseCaseProvider = Provider<ResetPasswordUseCase>((ref) {
   return ResetPasswordUseCase(ref.read(authRepositoryProvider));
 });
 
+final forgotPasswordUseCaseProvider = Provider<ForgotPasswordUseCase>((ref) {
+  return ForgotPasswordUseCase(ref.read(authRepositoryProvider));
+});
+
 // Main Auth Notifier Provider
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthStateData>((ref) {
   return AuthNotifier(
@@ -90,6 +95,7 @@ final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthStateData>(
     signOutUseCase: ref.read(signOutUseCaseProvider),
     getCurrentUserUseCase: ref.read(getCurrentUserUseCaseProvider),
     resetPasswordUseCase: ref.read(resetPasswordUseCaseProvider),
+    forgotPasswordUseCase: ref.read(forgotPasswordUseCaseProvider),
     localDataSource: ref.read(authLocalDataSourceProvider),
   );
 });

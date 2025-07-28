@@ -60,6 +60,8 @@ dependencies:
   json_annotation: ^4.9.0
   shared_preferences: ^2.5.3
   flutter_localization: ^0.3.3
+  fl_chart: ^1.0.0
+  shimmer: ^3.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

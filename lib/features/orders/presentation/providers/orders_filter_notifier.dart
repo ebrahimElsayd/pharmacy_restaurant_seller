@@ -11,8 +11,14 @@ final ordersFilterNotifierProvider = StateNotifierProvider<OrdersFilterNotifier,
 class OrdersFilterNotifier extends StateNotifier<OrdersFilterState> {
   OrdersFilterNotifier() : super(OrdersFilterState.empty());
 
+  // Modified to handle toggling filters
   void setStatus(String? status) {
-    state = state.copyWith(status: status);
+    // If the same status is selected again, clear it
+    if (state.status == status) {
+      state = state.copyWith(status: null);
+    } else {
+      state = state.copyWith(status: status);
+    }
   }
 
   void setDateRange(DateTime? start, DateTime? end) {
@@ -23,6 +29,7 @@ class OrdersFilterNotifier extends StateNotifier<OrdersFilterState> {
     state = state.copyWith(searchQuery: query);
   }
 
+  // Enhanced to ensure complete filter reset
   void clearFilters() {
     state = OrdersFilterState.empty();
   }

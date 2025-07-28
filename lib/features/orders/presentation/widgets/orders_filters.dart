@@ -4,6 +4,7 @@ import '../../../../core/theme/app_pallete.dart';
 import '../../../../core/theme/font_weight_helper.dart';
 import '../../../../core/theme/values_manager.dart';
 import '../providers/orders_filter_notifier.dart';
+import '../providers/orders_notifier.dart';
 
 class OrdersFilters extends ConsumerWidget {
   const OrdersFilters({super.key});
@@ -101,31 +102,76 @@ class _FilterChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
+    // Properly determine if this chip is selected
     final isSelected = (value == null && groupValue == null) || (value == groupValue);
+
+    // Choose appropriate colors based on the status value
+    Color chipColor = AppPallete.primaryColor;
+    if (value != null) {
+      switch (value) {
+        case 'pending':
+          chipColor = AppPallete.pending;
+          break;
+        case 'processing':
+          chipColor = AppPallete.processing;
+          break;
+        case 'shipped':
+          chipColor = AppPallete.shipped;
+          break;
+        case 'delivered':
+          chipColor = AppPallete.delivered;
+          break;
+        case 'cancelled':
+          chipColor = AppPallete.redColor;
+          break;
+        case 'returned':
+          chipColor = AppPallete.orangeColor;
+          break;
+        default:
+          chipColor = AppPallete.primaryColor;
+      }
+    }
 
     return FilterChip(
       label: Text(
         label,
         style: TextStyle(
           fontSize: FontSize.s12,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
       selected: isSelected,
       onSelected: (selected) {
+        // This is the fix for the filter issue:
+        // Always set the status correctly even when clicking "All"
         final notifier = ref.read(ordersFilterNotifierProvider.notifier);
 
-        notifier.setStatus(selected ? value : null);
+        // If clicking on "All" or deselecting current filter, explicitly clear filter
+        if (value == null || !selected) {
+          notifier.clearFilters(); // Use clearFilters to reset all filters
+        } else {
+          notifier.setStatus(value); // Set the selected filter
+        }
+
+        // Trigger a refresh of orders with the new filter state
+        ref.read(ordersNotifierProvider.notifier).filterOrders();
       },
-      selectedColor: AppPallete.primaryColor.withValues(alpha: 0.1),
+      selectedColor: isSelected ? chipColor.withOpacity(0.15) : AppPallete.white,
       backgroundColor: AppPallete.white,
-      checkmarkColor: AppPallete.primaryColor,
+      checkmarkColor: chipColor,
       labelStyle: TextStyle(
-        color: isSelected ? AppPallete.primaryColor : AppPallete.lightGreyForText, // تأكد من الألوان
+        color: isSelected ? chipColor : AppPallete.lightGreyForText,
         fontSize: FontSize.s12,
       ),
       side: BorderSide(
-        color: isSelected ? AppPallete.primaryColor : AppPallete.borderColor, // تأكد من الألوان
+        color: isSelected ? chipColor : AppPallete.borderColor,
+        width: isSelected ? 1.5 : 1.0,
+      ),
+      elevation: isSelected ? 1 : 0,
+      shadowColor: isSelected ? chipColor.withOpacity(0.3) : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }

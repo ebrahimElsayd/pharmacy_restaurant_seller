@@ -1,4 +1,3 @@
-// lib/feature/orders/presentation/screens/order_details_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,6 +7,7 @@ import '../../../../core/theme/font_weight_helper.dart';
 import '../../../../core/theme/values_manager.dart';
 import '../providers/order_details_notifier.dart';
 import '../providers/order_details_state.dart';
+import '../providers/orders_notifier.dart';
 import '../providers/usecases_providers.dart';
 import '../widgets/customer_info.dart';
 import '../widgets/order_summary.dart';
@@ -15,42 +15,63 @@ import '../widgets/order_timeline.dart';
 import '../widgets/orders_empty_state.dart';
 import '../widgets/products_list.dart';
 
-// إضافة Provider لتحديث الحالة
-final updateOrderStatusNotifierProvider =
-StateNotifierProvider<UpdateOrderStatusNotifier, void>(
-      (ref) => UpdateOrderStatusNotifier(ref),
-);
+// Simple update functions without provider
+class OrderStatusUpdater {
+  static Future<void> updateStatus(WidgetRef ref, String orderId, String status) async {
+    try {
+      final updateStatusUseCase = ref.read(updateOrderStatusProvider);
+      final result = await updateStatusUseCase(orderId, status);
 
-class UpdateOrderStatusNotifier extends StateNotifier<void> {
-  final Ref ref;
-
-  UpdateOrderStatusNotifier(this.ref) : super(null);
-
-  Future<void> updateStatus(String orderId, String status) async {
-    final updateStatusUseCase = ref.read(updateOrderStatusProvider);
-    final result = await updateStatusUseCase(orderId, status);
-    return result.fold(
-          (failure) => throw failure,
-          (_) => null,
-    );
+      result.fold(
+            (failure) => throw Exception(failure.toString()),
+            (_) {
+          // Force refresh the order details after successful update
+          ref.invalidate(orderDetailsNotifierProvider(orderId));
+          // Also refresh the orders list if available
+          ref.invalidate(ordersNotifierProvider);
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to update status: ${e.toString()}');
+    }
   }
 
-  Future<void> updateNotes(String orderId, String notes) async {
-    final updateNotesUseCase = ref.read(updateOrderNotesProvider);
-    final result = await updateNotesUseCase(orderId, notes);
-    return result.fold(
-          (failure) => throw failure,
-          (_) => null,
-    );
+  static Future<void> updateNotes(WidgetRef ref, String orderId, String notes) async {
+    try {
+      final updateNotesUseCase = ref.read(updateOrderNotesProvider);
+      final result = await updateNotesUseCase(orderId, notes);
+
+      result.fold(
+            (failure) => throw Exception(failure.toString()),
+            (_) {
+          // Force refresh the order details after successful update
+          ref.invalidate(orderDetailsNotifierProvider(orderId));
+          // Also refresh the orders list if available
+          ref.invalidate(ordersNotifierProvider);
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to update notes: ${e.toString()}');
+    }
   }
 
-  Future<void> updateDeliveryDate(String orderId, DateTime date) async {
-    final updateDateUseCase = ref.read(updateExpectedDeliveryDateProvider);
-    final result = await updateDateUseCase(orderId, date);
-    return result.fold(
-          (failure) => throw failure,
-          (_) => null,
-    );
+  static Future<void> updateDeliveryDate(WidgetRef ref, String orderId, DateTime date) async {
+    try {
+      final updateDateUseCase = ref.read(updateExpectedDeliveryDateProvider);
+      final result = await updateDateUseCase(orderId, date);
+
+      result.fold(
+            (failure) => throw Exception(failure.toString()),
+            (_) {
+          // Force refresh the order details after successful update
+          ref.invalidate(orderDetailsNotifierProvider(orderId));
+          // Also refresh the orders list if available
+          ref.invalidate(ordersNotifierProvider);
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to update delivery date: ${e.toString()}');
+    }
   }
 }
 
@@ -67,71 +88,127 @@ class OrderDetailsScreen extends ConsumerWidget {
     final orderDetailsState = ref.watch(orderDetailsNotifierProvider(orderId));
 
     return Scaffold(
+      backgroundColor: AppPallete.background,
       appBar: _buildAppBar(context),
       body: _buildContent(orderDetailsState, ref, context),
     );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      title: const Text(
-        'تفاصيل الطلب',
+      title: Text(
+        'Order Details',
         style: TextStyle(
           fontSize: FontSize.s20,
           fontWeight: FontWeight.bold,
+          color: AppPallete.blackForText,
         ),
       ),
       centerTitle: true,
-      actions: [
-        IconButton(
-          onPressed: () {
-            // مشاركة الفاتورة
-            _shareInvoice(context);
-          },
-          icon: const Icon(Icons.share),
+      elevation: 0,
+      backgroundColor: AppPallete.white,
+      foregroundColor: AppPallete.blackForText,
+      leading: IconButton(
+        onPressed: () => Navigator.pop(context),
+        icon: Container(
+          padding: EdgeInsets.all(8.w),
+          decoration: BoxDecoration(
+            color: AppPallete.background,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: const Icon(Icons.arrow_back, size: 20),
         ),
-        IconButton(
-          onPressed: () {
-            // طباعة الفاتورة
-            _printInvoice(context);
-          },
-          icon: const Icon(Icons.print),
+      ),
+      actions: [
+        Container(
+          margin: EdgeInsets.only(right: ValuesManager.marginMedium),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildActionButton(
+                icon: Icons.share_rounded,
+                onPressed: () => _shareInvoice(context),
+                color: AppPallete.blueColor,
+              ),
+              SizedBox(width: ValuesManager.marginSmall),
+              _buildActionButton(
+                icon: Icons.print_rounded,
+                onPressed: () => _printInvoice(context),
+                color: AppPallete.primaryColor,
+              ),
+            ],
+          ),
         ),
       ],
-      backgroundColor: AppPallete.white,
-      elevation: 0,
     );
   }
 
-  /// ✅ الحل: استبدال state.when بالتحقق المباشر من خصائص الحالة
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required Color color,
+  }) {
+    return Container(
+      width: AppSize.s40,
+      height: AppSize.s40,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: color, size: 20.sp),
+        padding: EdgeInsets.all(8.w),
+        constraints: BoxConstraints(
+          minWidth: 40.w,
+          minHeight: 40.h,
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent(
       OrderDetailsState state, WidgetRef ref, BuildContext context) {
-    // عرض مؤشر التحميل إذا كان التحميل جارٍ
     if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: AppPallete.primaryColor,
+              strokeWidth: 3,
+            ),
+            SizedBox(height: ValuesManager.marginMedium),
+            Text(
+              'Loading order details...',
+              style: TextStyle(
+                color: AppPallete.lightGreyForText,
+                fontSize: FontSize.s14,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
-    // عرض رسالة الخطأ إذا حدث خطأ
     if (state.error != null) {
       return OrdersEmptyState(
-        title: 'حدث خطأ',
+        title: 'Error Occurred',
         message: state.error!,
-        icon: Icons.error_outline,
+        icon: Icons.error_outline_rounded,
         onRetry: () => ref.refresh(orderDetailsNotifierProvider(orderId)),
       );
     }
 
-    // التحقق من وجود الطلب
     if (state.order == null) {
       return OrdersEmptyState(
-        title: 'الطلب غير موجود',
-        message: 'لم يتم العثور على تفاصيل الطلب المطلوب.',
-        icon: Icons.info_outline,
+        title: 'Order Not Found',
+        message: 'The requested order details could not be found.',
+        icon: Icons.search_off_rounded,
         onRetry: () => ref.refresh(orderDetailsNotifierProvider(orderId)),
       );
     }
 
-    // عرض تفاصيل الطلب إذا كان موجودًا
     final order = state.order!;
     return SingleChildScrollView(
       padding: EdgeInsets.all(ValuesManager.paddingMedium),
@@ -145,113 +222,137 @@ class OrderDetailsScreen extends ConsumerWidget {
           SizedBox(height: ValuesManager.marginMedium),
           ProductsList(items: order.items),
           SizedBox(height: ValuesManager.marginMedium),
-          _buildActionButtons(context, order.id!, ref),
+          _buildQuickActions(context, order.id!, ref),
+          SizedBox(height: ValuesManager.marginLarge),
         ],
       ),
     );
   }
 
-  Widget _buildActionButtons(
+  Widget _buildQuickActions(
       BuildContext context, String orderId, WidgetRef ref) {
     return Container(
+      margin: EdgeInsets.symmetric(horizontal: ValuesManager.paddingMedium),
       padding: EdgeInsets.all(ValuesManager.paddingMedium),
       decoration: BoxDecoration(
         color: AppPallete.white,
-        borderRadius: BorderRadius.circular(ValuesManager.borderRadiusLarge),
-        border: Border.all(color: AppPallete.borderColor),
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'إجراءات سريعة',
+          Text(
+            'Quick Actions',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: FontSize.s16,
+              color: AppPallete.blackForText,
             ),
           ),
           SizedBox(height: ValuesManager.paddingMedium),
+          // First row - 2 items
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // تغيير حالة الطلب
-                    _showStatusChangeDialog(context, orderId, ref);
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: const Text('تغيير الحالة'),
-                  style: ElevatedButton.styleFrom(
-                    padding:
-                    EdgeInsets.symmetric(vertical: ValuesManager.paddingMedium),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
-                    ),
-                    backgroundColor: AppPallete.primaryColor,
-                  ),
+                child: _buildCompactActionButton(
+                  icon: Icons.edit,
+                  label: 'Update Status',
+                  color: AppPallete.primaryColor,
+                  onTap: () => _showStatusChangeDialog(context, orderId, ref),
                 ),
               ),
               SizedBox(width: ValuesManager.marginSmall),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    // إضافة ملاحظات
-                    _showNotesDialog(context, orderId, ref);
-                  },
-                  icon: const Icon(Icons.note_add, size: 18),
-                  label: const Text('إضافة ملاحظة'),
-                  style: OutlinedButton.styleFrom(
-                    padding:
-                    EdgeInsets.symmetric(vertical: ValuesManager.paddingMedium),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
-                    ),
-                  ),
+                child: _buildCompactActionButton(
+                  icon: Icons.note_add,
+                  label: 'Add Note',
+                  color: AppPallete.blueColor,
+                  onTap: () => _showNotesDialog(context, orderId, ref),
+                  isOutlined: true,
                 ),
               ),
             ],
           ),
           SizedBox(height: ValuesManager.marginSmall),
+          // Second row - 2 items
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    // تعيين تاريخ التسليم
-                    _showDeliveryDateDialog(context, orderId, ref);
-                  },
-                  icon: const Icon(Icons.calendar_today, size: 18),
-                  label: const Text('تاريخ التسليم'),
-                  style: OutlinedButton.styleFrom(
-                    padding:
-                    EdgeInsets.symmetric(vertical: ValuesManager.paddingMedium),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
-                    ),
-                  ),
+                child: _buildCompactActionButton(
+                  icon: Icons.calendar_today,
+                  label: 'Set Delivery',
+                  color: AppPallete.orangeColor,
+                  onTap: () => _showDeliveryDateDialog(context, orderId, ref),
+                  isOutlined: true,
                 ),
               ),
               SizedBox(width: ValuesManager.marginSmall),
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // طباعة طلب التوصيل
-                    _printDeliveryOrder(context, orderId);
-                  },
-                  icon: const Icon(Icons.local_shipping, size: 18),
-                  label: const Text('طلب التوصيل'),
-                  style: ElevatedButton.styleFrom(
-                    padding:
-                    EdgeInsets.symmetric(vertical: ValuesManager.paddingMedium),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ValuesManager.borderRadius),
-                    ),
-                    backgroundColor: AppPallete.primaryColor,
-                  ),
+                child: _buildCompactActionButton(
+                  icon: Icons.local_shipping,
+                  label: 'Print Order',
+                  color: AppPallete.greenColor,
+                  onTap: () => _printDeliveryOrder(context, orderId),
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCompactActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool isOutlined = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: 12.h,
+          horizontal: 8.w,
+        ),
+        decoration: BoxDecoration(
+          color: isOutlined ? AppPallete.white : color,
+          borderRadius: BorderRadius.circular(12.r),
+          border: isOutlined ? Border.all(color: color, width: 1.5) : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isOutlined ? color : AppPallete.white,
+              size: 16.sp,
+            ),
+            SizedBox(width: 6.w),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isOutlined ? color : AppPallete.white,
+                  fontSize: FontSize.s12,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -261,87 +362,168 @@ class OrderDetailsScreen extends ConsumerWidget {
     final statuses = [
       {
         'value': 'pending',
-        'label': 'قيد الانتظار',
-        'color': AppPallete.orangeColor
+        'label': 'Pending',
+        'color': AppPallete.pending,
+        'icon': Icons.access_time_rounded,
       },
       {
         'value': 'processing',
-        'label': 'قيد التجهيز',
-        'color': AppPallete.blueColor
+        'label': 'Processing',
+        'color': AppPallete.processing,
+        'icon': Icons.build_rounded,
       },
-      {'value': 'shipped', 'label': 'تم الشحن', 'color': AppPallete.primaryColor},
+      {
+        'value': 'shipped',
+        'label': 'Shipped',
+        'color': AppPallete.shipped,
+        'icon': Icons.local_shipping_rounded,
+      },
       {
         'value': 'delivered',
-        'label': 'تم التوصيل',
-        'color': AppPallete.greenColor
+        'label': 'Delivered',
+        'color': AppPallete.delivered,
+        'icon': Icons.check_circle_rounded,
       },
-      {'value': 'cancelled', 'label': 'ملغي', 'color': AppPallete.redColor},
+      {
+        'value': 'cancelled',
+        'label': 'Cancelled',
+        'color': AppPallete.redColor,
+        'icon': Icons.cancel_rounded,
+      },
     ];
 
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius:
-        BorderRadius.vertical(top: Radius.circular(ValuesManager.borderRadiusLarge)),
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: EdgeInsets.all(ValuesManager.paddingMedium),
-                child: const Text(
-                  'تغيير حالة الطلب',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        return Container(
+          decoration: BoxDecoration(
+            color: AppPallete.white,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(24.r),
+            ),
+          ),
+          padding: EdgeInsets.all(ValuesManager.paddingLarge),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: AppPallete.borderColor,
+                    borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
-              ),
-              ...statuses.map((status) {
-                return ListTile(
-                  title: Text(status['label'] as String),
-                  leading: Container(
-                    width: 12.w,
-                    height: 12.h,
-                    decoration: BoxDecoration(
-                      color: status['color'] as Color,
-                      shape: BoxShape.circle,
-                    ),
+                SizedBox(height: ValuesManager.paddingLarge),
+                Text(
+                  'Update Order Status',
+                  style: TextStyle(
+                    fontSize: FontSize.s20,
+                    fontWeight: FontWeight.bold,
+                    color: AppPallete.blackForText,
                   ),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    try {
-                      await ref
-                          .read(updateOrderStatusNotifierProvider.notifier)
-                          .updateStatus(orderId, status['value'] as String);
+                ),
+                SizedBox(height: ValuesManager.paddingLarge),
+                ...statuses.map((status) {
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: ValuesManager.marginSmall),
+                    child: ListTile(
+                      onTap: () async {
+                        Navigator.of(context).pop();
 
-                      // تحديث عرض الطلب
-                      ref.invalidate(orderDetailsNotifierProvider(orderId));
-
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('تم تحديث حالة الطلب بنجاح'),
-                            backgroundColor: AppPallete.greenColor,
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
+                        // Show loading snackbar
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('حدث خطأ: ${e.toString()}'),
-                            backgroundColor: AppPallete.redColor,
+                            content: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 16.w,
+                                  height: 16.h,
+                                  child: CircularProgressIndicator(
+                                    color: AppPallete.white,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Text('Updating status...'),
+                              ],
+                            ),
+                            backgroundColor: AppPallete.primaryColor,
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
                           ),
                         );
-                      }
-                    }
-                  },
-                );
-              }).toList(),
-            ],
+
+                        try {
+                          await OrderStatusUpdater.updateStatus(
+                              ref,
+                              orderId,
+                              status['value'] as String
+                          );
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Order status updated successfully'),
+                                backgroundColor: AppPallete.greenColor,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                backgroundColor: AppPallete.redColor,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      leading: Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: BoxDecoration(
+                          color: (status['color'] as Color).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Icon(
+                          status['icon'] as IconData,
+                          color: status['color'] as Color,
+                          size: 20.sp,
+                        ),
+                      ),
+                      title: Text(
+                        status['label'] as String,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: FontSize.s16,
+                        ),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
           ),
         );
       },
@@ -355,51 +537,128 @@ class OrderDetailsScreen extends ConsumerWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('إضافة ملاحظة'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          title: Text(
+            'Add Note',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: FontSize.s18,
+            ),
+          ),
           content: TextField(
             controller: controller,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'اكتب ملاحظتك هنا...',
-              border: OutlineInputBorder(),
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'Enter your note here...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: AppPallete.borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: AppPallete.primaryColor, width: 2),
+              ),
+              contentPadding: EdgeInsets.all(ValuesManager.paddingMedium),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إلغاء'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppPallete.lightGreyForText),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(context).pop();
-                try {
-                  await ref
-                      .read(updateOrderStatusNotifierProvider.notifier)
-                      .updateNotes(orderId, controller.text);
+                if (controller.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please enter a note'),
+                      backgroundColor: AppPallete.orangeColor,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  );
+                  return;
+                }
 
-                  // تحديث عرض الطلب
-                  ref.invalidate(orderDetailsNotifierProvider(orderId));
+                Navigator.of(context).pop();
+
+                // Show loading snackbar
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16.w,
+                          height: 16.h,
+                          child: CircularProgressIndicator(
+                            color: AppPallete.white,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Text('Saving note...'),
+                      ],
+                    ),
+                    backgroundColor: AppPallete.primaryColor,
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                );
+
+                try {
+                  await OrderStatusUpdater.updateNotes(
+                      ref,
+                      orderId,
+                      controller.text.trim()
+                  );
 
                   if (context.mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تم حفظ الملاحظة بنجاح'),
+                      SnackBar(
+                        content: Text('Note saved successfully'),
                         backgroundColor: AppPallete.greenColor,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
                       ),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('حدث خطأ: ${e.toString()}'),
+                        content: Text('Error: ${e.toString()}'),
                         backgroundColor: AppPallete.redColor,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
                       ),
                     );
                   }
                 }
               },
-              child: const Text('حفظ'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppPallete.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: const Text('Save'),
             ),
           ],
         );
@@ -412,23 +671,36 @@ class OrderDetailsScreen extends ConsumerWidget {
     showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppPallete.primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
     ).then((date) async {
       if (date != null) {
         try {
-          await ref
-              .read(updateOrderStatusNotifierProvider.notifier)
-              .updateDeliveryDate(orderId, date);
-
-          // تحديث عرض الطلب
-          ref.invalidate(orderDetailsNotifierProvider(orderId));
+          await OrderStatusUpdater.updateDeliveryDate(
+              ref,
+              orderId,
+              date
+          );
 
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('تم تحديث تاريخ التسليم بنجاح'),
+              SnackBar(
+                content: Text('Delivery date updated successfully'),
                 backgroundColor: AppPallete.greenColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
               ),
             );
           }
@@ -436,8 +708,12 @@ class OrderDetailsScreen extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('حدث خطأ: ${e.toString()}'),
+                content: Text('Error: ${e.toString()}'),
                 backgroundColor: AppPallete.redColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
               ),
             );
           }
@@ -447,17 +723,14 @@ class OrderDetailsScreen extends ConsumerWidget {
   }
 
   void _printInvoice(BuildContext context) {
-    // طباعة الفاتورة
     _generateAndPrintInvoice(context, 'invoice');
   }
 
   void _printDeliveryOrder(BuildContext context, String orderId) {
-    // طباعة طلب التوصيل
     _generateAndPrintInvoice(context, 'delivery', orderId: orderId);
   }
 
   void _shareInvoice(BuildContext context) {
-    // مشاركة الفاتورة
     _generateAndPrintInvoice(context, 'share');
   }
 
@@ -470,15 +743,19 @@ class OrderDetailsScreen extends ConsumerWidget {
         SnackBar(
           content: Text(
               action == 'invoice'
-                  ? 'جاري طباعة الفاتورة...'
+                  ? 'Printing invoice...'
                   : action == 'delivery'
-                  ? 'جاري طباعة طلب التوصيل...'
-                  : 'جاري مشاركة الفاتورة...'),
+                  ? 'Printing delivery order...'
+                  : 'Sharing invoice...'
+          ),
           backgroundColor: AppPallete.primaryColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+          ),
         ),
       );
     }
-    // هنا سيتم إضافة منطق الطباعة الفعلي
-    print('تنفيذ $action للطلب: $orderId');
+    print('Executing $action for order: $orderId');
   }
 }
