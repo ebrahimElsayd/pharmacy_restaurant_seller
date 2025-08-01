@@ -196,15 +196,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   hintText: 'Full Name',
                   icon: Icons.person_outline,
                   enabled: !isRegisterLoading,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Please enter your full name';
-                    }
-                    if (v.trim().length < 2) {
-                      return 'Name must be at least 2 characters';
-                    }
-                    return null;
-                  },
+                  validator: Validators.validateName,
                 ),
                 SizedBox(height: AppSize.s16),
 
@@ -215,9 +207,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   enabled: !isRegisterLoading,
-                  validator: (value) {
-                    return Validators.validateEmail(value);
-                  },
+                  validator: Validators.validateEmail,
                 ),
                 SizedBox(height: AppSize.s16),
 
@@ -229,15 +219,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   obscureText: _obscurePassword,
                   enabled: !isRegisterLoading,
                   onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (v.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
+                  validator: Validators.validatePassword,
                 ),
                 SizedBox(height: AppSize.s16),
 

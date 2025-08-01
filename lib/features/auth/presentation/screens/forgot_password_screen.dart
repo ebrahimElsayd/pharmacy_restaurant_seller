@@ -6,7 +6,6 @@ import 'package:pharmacy_restaurant_seller/core/theme/font_weight_helper.dart';
 import 'package:pharmacy_restaurant_seller/core/theme/values_manager.dart';
 import 'package:pharmacy_restaurant_seller/features/auth/presentation/widgets/custom_button.dart';
 import 'package:pharmacy_restaurant_seller/features/auth/presentation/widgets/custom_text_field.dart';
-import '../controllers/auth_controller.dart';
 import '../riverpods/auth_providers.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -20,7 +19,6 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  late AuthController _authController;
   bool _emailSent = false;
 
   @override
@@ -31,7 +29,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _authController = AuthController(ref, context);
     final isLoading = ref.watch(isForgotPasswordLoadingProvider);
 
     return Scaffold(
@@ -115,7 +112,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         hintText: 'Enter your email',
                         keyboardType: TextInputType.emailAddress,
                         icon: Icons.email_outlined,
-                        validator: _authController.validateEmail,
+                        validator: (value) => ref.read(authNotifierProvider.notifier).validateEmail(value),
                       ),
                       SizedBox(height: AppSize.s24),
 
@@ -206,10 +203,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   void _sendResetEmail() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        await _authController.forgotPassword(
-          email: _emailController.text.trim(),
+        await ref.read(authNotifierProvider.notifier).forgotPassword(
+          _emailController.text.trim(),
         );
-
         // Check if the operation was successful
         if (ref.read(errorMessageProvider) == null) {
           setState(() {

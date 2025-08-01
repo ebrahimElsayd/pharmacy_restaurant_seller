@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../controllers/auth_controller.dart';
 import '../riverpods/auth_providers.dart';
 import '../riverpods/auth_state.dart';
 import '../widgets/custom_text_field.dart';
@@ -23,7 +22,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  late AuthController _authController;
 
   @override
   void initState() {
@@ -48,9 +46,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   Future<void> _updatePassword() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await _authController.updatePassword(
-          newPassword: _passwordController.text.trim(),
-          token: '',
+        await ref.read(authNotifierProvider.notifier).updatePassword(
+          _passwordController.text.trim(),
         );
       } catch (_) {
         /* handled in AuthController */
@@ -59,9 +56,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Please enter a password';
-    if (value.length < 6) return 'Password must be at least 6 characters';
-    return null;
+    return ref.read(authNotifierProvider.notifier).validatePassword(value);
   }
 
   String? _validateConfirmPassword(String? value) {
@@ -84,8 +79,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _authController = ref.read(authControllerProvider(context));
-    final authState = ref.watch(authStateProvider);
     final isLoading = ref.watch(isLoadingProvider);
     final errorMessage = ref.watch(errorMessageProvider);
 

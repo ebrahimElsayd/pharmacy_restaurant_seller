@@ -7,7 +7,6 @@ import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/reset_pass_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
-import '../../../../core/constants/constants.dart';
 import 'auth_state.dart';
 
 class AuthNotifier extends StateNotifier<AuthStateData> {
@@ -27,14 +26,14 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     required ResetPasswordUseCase resetPasswordUseCase,
     required ForgotPasswordUseCase forgotPasswordUseCase,
     required AuthLocalDataSource localDataSource,
-  })  : _signInUseCase = signInUseCase,
-        _signUpUseCase = signUpUseCase,
-        _signOutUseCase = signOutUseCase,
-        _getCurrentUserUseCase = getCurrentUserUseCase,
-        _resetPasswordUseCase = resetPasswordUseCase,
-        _forgotPasswordUseCase = forgotPasswordUseCase,
-        _localDataSource = localDataSource,
-        super(const AuthStateData());
+  }) : _signInUseCase = signInUseCase,
+       _signUpUseCase = signUpUseCase,
+       _signOutUseCase = signOutUseCase,
+       _getCurrentUserUseCase = getCurrentUserUseCase,
+       _resetPasswordUseCase = resetPasswordUseCase,
+       _forgotPasswordUseCase = forgotPasswordUseCase,
+       _localDataSource = localDataSource,
+       super(const AuthStateData());
 
   // في دالة initializeAuth
   Future<void> initializeAuth() async {
@@ -65,7 +64,7 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
 
       final result = await _getCurrentUserUseCase();
       result.fold(
-            (failure) {
+        (failure) {
           _localDataSource.clearAllData();
           state = state.copyWith(
             state: AuthState.unauthenticated,
@@ -73,7 +72,7 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
             clearError: true,
           );
         },
-            (user) {
+        (user) {
           // تعطيل التحقق من البريد الإلكتروني مؤقتاً
           state = state.copyWith(
             state: AuthState.authenticated,
@@ -96,12 +95,13 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     final result = await _getCurrentUserUseCase();
 
     result.fold(
-          (failure) => state = state.copyWith(
-        state: AuthState.unauthenticated,
-        clearUser: true,
-        clearError: true,
-      ),
-          (user) {
+      (failure) =>
+          state = state.copyWith(
+            state: AuthState.unauthenticated,
+            clearUser: true,
+            clearError: true,
+          ),
+      (user) {
         // تعطيل التحقق من البريد الإلكتروني مؤقتاً
         state = state.copyWith(
           state: AuthState.authenticated,
@@ -112,29 +112,26 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     );
   }
 
-  // دالة التسجيل المحدثة - هذا هو الجزء المهم
   Future<void> register(
-      String email,
-      String password,
-      String fullName, {
-        String? phoneNumber,
-      }) async {
-    // بدء حالة التحميل
-    state = state.copyWith(
-      isRegisterLoading: true,
-      clearError: true,
-    );
+    String email,
+    String password,
+    String fullName, {
+    String? phoneNumber,
+  }) async {
+    state = state.copyWith(isRegisterLoading: true, clearError: true);
 
     try {
-      final result = await _signUpUseCase(SignUpParams(
-        email: email,
-        password: password,
-        fullName: fullName,
-        phoneNumber: phoneNumber,
-      ));
+      final result = await _signUpUseCase(
+        SignUpParams(
+          email: email,
+          password: password,
+          fullName: fullName,
+          phoneNumber: phoneNumber,
+        ),
+      );
 
       result.fold(
-            (failure) {
+        (failure) {
           // في حالة الفشل - البقاء في نفس الصفحة مع إظهار الخطأ
           state = state.copyWith(
             state: AuthState.error,
@@ -142,16 +139,15 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
             isRegisterLoading: false,
           );
         },
-            (_) async {
+        (_) async {
           // في حالة النجاح - محاولة تسجيل الدخول التلقائي
           try {
-            final loginResult = await _signInUseCase(SignInParams(
-              email: email,
-              password: password,
-            ));
+            final loginResult = await _signInUseCase(
+              SignInParams(email: email, password: password),
+            );
 
             loginResult.fold(
-                  (loginFailure) {
+              (loginFailure) {
                 // فشل في تسجيل الدخول التلقائي - إرسال المستخدم لصفحة تسجيل الدخول
                 state = state.copyWith(
                   state: AuthState.registrationSuccess,
@@ -159,12 +155,10 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
                   clearError: true,
                 );
               },
-                  (_) async {
+              (_) async {
                 // نجح في تسجيل الدخول التلقائي - الذهاب مباشرة للداشبورد
                 await _checkAuthStatus();
-                state = state.copyWith(
-                  isRegisterLoading: false,
-                );
+                state = state.copyWith(isRegisterLoading: false);
               },
             );
           } catch (e) {
@@ -188,27 +182,28 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     print("🏁 DEBUG AUTH_NOTIFIER: Register method completed");
   }
 
-  Future<void> login(String email, String password, {bool rememberMe = false}) async {
-    state = state.copyWith(
-      isLoginLoading: true,
-      clearError: true,
-    );
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
+    state = state.copyWith(isLoginLoading: true, clearError: true);
 
     // حفظ اختيار "تذكرني"
     await _localDataSource.saveRememberMe(rememberMe);
 
-    final result = await _signInUseCase(SignInParams(
-      email: email,
-      password: password,
-    ));
+    final result = await _signInUseCase(
+      SignInParams(email: email, password: password),
+    );
 
     result.fold(
-          (failure) => state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: failure.message,
-        isLoginLoading: false,
-      ),
-          (_) async {
+      (failure) =>
+          state = state.copyWith(
+            state: AuthState.error,
+            errorMessage: failure.message,
+            isLoginLoading: false,
+          ),
+      (_) async {
         state = state.copyWith(isLoginLoading: false);
         await _checkAuthStatus();
       },
@@ -221,61 +216,64 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     final result = await _signOutUseCase();
 
     result.fold(
-          (failure) => state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: failure.message,
-      ),
-          (_) => state = state.copyWith(
-        state: AuthState.unauthenticated,
-        clearUser: true,
-        clearError: true,
-      ),
+      (failure) =>
+          state = state.copyWith(
+            state: AuthState.error,
+            errorMessage: failure.message,
+          ),
+      (_) =>
+          state = state.copyWith(
+            state: AuthState.unauthenticated,
+            clearUser: true,
+            clearError: true,
+          ),
     );
   }
 
   Future<void> forgotPassword(String email) async {
-    state = state.copyWith(
-      isForgotPasswordLoading: true,
-      clearError: true,
+    state = state.copyWith(isForgotPasswordLoading: true, clearError: true);
+
+    final result = await _forgotPasswordUseCase(
+      ForgotPasswordParams(email: email),
     );
 
-    final result = await _forgotPasswordUseCase(ForgotPasswordParams(email: email));
-
     result.fold(
-          (failure) => state = state.copyWith(
-        state: AuthState.error,
-        errorMessage: failure.message,
-        isForgotPasswordLoading: false,
-      ),
-          (_) => state = state.copyWith(
-        state: AuthState.passwordResetSent,
-        resetEmail: email,
-        isForgotPasswordLoading: false,
-        clearError: true,
-      ),
+      (failure) =>
+          state = state.copyWith(
+            state: AuthState.error,
+            errorMessage: failure.message,
+            isForgotPasswordLoading: false,
+          ),
+      (_) =>
+          state = state.copyWith(
+            state: AuthState.passwordResetSent,
+            resetEmail: email,
+            isForgotPasswordLoading: false,
+            clearError: true,
+          ),
     );
   }
 
   Future<void> updatePassword(String newPassword) async {
-    state = state.copyWith(
-      isResetPasswordLoading: true,
-      clearError: true,
-    );
-
+    state = state.copyWith(isResetPasswordLoading: true, clearError: true);
     try {
-      final result = await _resetPasswordUseCase.repository.updatePassword(newPassword: newPassword);
+      final result = await _resetPasswordUseCase(
+        ResetPasswordParams(newPassword: newPassword),
+      );
 
       result.fold(
-            (failure) => state = state.copyWith(
-          state: AuthState.error,
-          errorMessage: failure.message,
-          isResetPasswordLoading: false,
-        ),
-            (_) => state = state.copyWith(
-          state: AuthState.authenticated,
-          isResetPasswordLoading: false,
-          clearError: true,
-        ),
+        (failure) =>
+            state = state.copyWith(
+              state: AuthState.error,
+              errorMessage: failure.message,
+              isResetPasswordLoading: false,
+            ),
+        (_) =>
+            state = state.copyWith(
+              state: AuthState.authenticated,
+              isResetPasswordLoading: false,
+              clearError: true,
+            ),
       );
     } catch (e) {
       state = state.copyWith(
@@ -286,29 +284,62 @@ class AuthNotifier extends StateNotifier<AuthStateData> {
     }
   }
 
+
   void clearError() {
     state = state.copyWith(clearError: true);
   }
 
-  void clearPasswordResetSent() {
-    if (state.state == AuthState.passwordResetSent) {
-      state = state.copyWith(state: AuthState.unauthenticated);
+  // void clearPasswordResetSent() {
+  //   if (state.state == AuthState.passwordResetSent) {
+  //     state = state.copyWith(state: AuthState.unauthenticated);
+  //   }
+  // }
+  //
+  // /// تحديث الجلسة
+  // Future<void> refreshSession() async {
+  //   final sessionExpiry = DateTime.now().add(
+  //     Duration(minutes: Constants.sessionTimeoutMinutes),
+  //   );
+  //   await _localDataSource.saveSessionExpiry(sessionExpiry);
+  // }
+
+  // /// التحقق من حالة "تذكرني"
+  // Future<bool> getRememberMe() async {
+  //   return await _localDataSource.getRememberMe();
+  // }
+  //
+  // /// تحديث حالة المصادقة (مفيد لتحقق البريد الإلكتروني)
+  // Future<void> refreshAuthStatus() async {
+  //   await _checkAuthStatus();
+  // }
+
+  String? validateEmail(String? email) {
+    if (email == null || email.trim().isEmpty) {
+      return 'Please enter your email';
     }
+    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email.trim())) {
+      return 'Please enter a valid email';
+    }
+    return null;
   }
 
-  /// تحديث الجلسة
-  Future<void> refreshSession() async {
-    final sessionExpiry = DateTime.now().add(Duration(minutes: Constants.sessionTimeoutMinutes));
-    await _localDataSource.saveSessionExpiry(sessionExpiry);
+  String? validatePassword(String? password) {
+    if (password == null || password.isEmpty) {
+      return 'Please enter a password';
+    }
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
   }
 
-  /// التحقق من حالة "تذكرني"
-  Future<bool> getRememberMe() async {
-    return await _localDataSource.getRememberMe();
-  }
-
-  /// تحديث حالة المصادقة (مفيد لتحقق البريد الإلكتروني)
-  Future<void> refreshAuthStatus() async {
-    await _checkAuthStatus();
+  String? validateName(String? name) {
+    if (name == null || name.trim().isEmpty) {
+      return 'Please enter your name';
+    }
+    if (name.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    return null;
   }
 }

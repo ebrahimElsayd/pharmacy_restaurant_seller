@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
 import '../repositories/auth_repository.dart';
-import '../../../../core/utils/validators.dart';
 import '../../../../core/erorr/failures.dart';
 
 class SignUpUseCase {
@@ -9,32 +8,7 @@ class SignUpUseCase {
 
   SignUpUseCase(this._repository);
 
-  Future<Either<Failure, void>> call(SignUpParams params) async {
-    // Validate input
-    final emailValidation = Validators.validateEmail(params.email);
-    if (emailValidation != null) {
-      return left(ValidationFailure(message: emailValidation));
-    }
-
-    final passwordValidation = Validators.validatePassword(params.password);
-    if (passwordValidation != null) {
-      return left(ValidationFailure(message: passwordValidation));
-    }
-
-    final nameValidation = Validators.validateName(params.fullName);
-    if (nameValidation != null) {
-      return left(ValidationFailure(message: nameValidation));
-    }
-
-    // Validate phone number if provided
-    if (params.phoneNumber != null) {
-      final phoneValidation = Validators.validatePhoneNumber(params.phoneNumber!);
-      if (phoneValidation != null) {
-        return left(ValidationFailure(message: phoneValidation));
-      }
-    }
-
-    // Execute sign up
+  Future<Either<Failure, Unit>> call(SignUpParams params) async {
     return await _repository.signUp(
       email: params.email,
       password: params.password,

@@ -33,7 +33,7 @@ class TopProductModel {
     };
   }
 
-  // ✅ تحويل Model إلى Entity بدون وراثة
+  // ✅ تحويل Model إلى Entity
   TopProduct toEntity() {
     return TopProduct(
       name: name,

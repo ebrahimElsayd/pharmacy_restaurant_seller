@@ -153,9 +153,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   enabled: !isLoginLoading,
-                  validator: (value) {
-                    return Validators.validateEmail(value);
-                  },
+                  validator: Validators.validateEmail,
                 ),
                 SizedBox(height: AppSize.s20),
 
@@ -168,15 +166,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   enabled: !isLoginLoading,
                   onToggleVisibility: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
+                  validator: Validators.validatePassword,
                 ),
                 SizedBox(height: AppSize.s16),
 

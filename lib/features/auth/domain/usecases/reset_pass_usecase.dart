@@ -2,34 +2,29 @@ import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
 import '../../../../core/erorr/failures.dart';
 import '../repositories/auth_repository.dart';
-import '../../../../core/utils/validators.dart';
 
 class ResetPasswordUseCase {
   final AuthRepository _repository;
 
   ResetPasswordUseCase(this._repository);
 
-  AuthRepository get repository => _repository;
-
-  Future<Either<Failure, void>> call(ResetPasswordParams params) async {
-    // Validate email
-    final emailValidation = Validators.validateEmail(params.email);
-    if (emailValidation != null) {
-      return Left(ValidationFailure(message: emailValidation));
-    }
-
-    return await _repository.resetPassword(email: params.email);
+  Future<Either<Failure, Unit>> call(ResetPasswordParams params) async {
+    return await _repository.updatePassword(
+      newPassword: params.newPassword,
+    );
   }
 }
 
 class ResetPasswordParams extends Equatable {
-  final String email;
+  final String newPassword;
 
-  const ResetPasswordParams({required this.email});
+  const ResetPasswordParams({
+    required this.newPassword,
+  });
 
   @override
-  List<Object> get props => [email];
+  List<Object?> get props => [newPassword];
 
   @override
-  String toString() => 'ResetPasswordParams(email: $email)';
+  String toString() => 'ResetPasswordParams(newPassword: [HIDDEN])';
 }

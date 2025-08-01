@@ -207,7 +207,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
             // اسم التطبيق
             Text(
-              'Restaurant Seller',
+              'Seller',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).primaryColor,

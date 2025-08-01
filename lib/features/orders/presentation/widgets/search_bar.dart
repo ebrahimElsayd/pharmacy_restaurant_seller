@@ -125,15 +125,6 @@ class _OrdersSearchBarState extends ConsumerState<OrdersSearchBar> {
               Icons.search,
               color: AppPallete.lightGreyForText,
             ),
-            // suffixIcon: _controller.text.isNotEmpty
-            //     ? IconButton(
-            //   icon: const Icon(
-            //     Icons.clear,
-            //     color: AppPallete.lightGreyForText,
-            //   ),
-            //   onPressed: _clearSearch,
-            // )
-            //     : null,
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(
               horizontal: ValuesManager.paddingMedium,

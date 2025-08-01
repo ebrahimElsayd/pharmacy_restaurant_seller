@@ -121,10 +121,10 @@ class OrdersListScreen extends ConsumerWidget {
     );
   }
 
-  // Simplified _performSearch - just trigger filter in notifier
-  void _performSearch(WidgetRef ref) {
-    ref.read(ordersNotifierProvider.notifier).filterOrders();
-  }
+  // // Simplified _performSearch - just trigger filter in notifier
+  // void _performSearch(WidgetRef ref) {
+  //   ref.read(ordersNotifierProvider.notifier).filterOrders();
+  // }
 
   Future<void> _refreshOrders(WidgetRef ref) async {
     // This now correctly refreshes based on current filters/search
