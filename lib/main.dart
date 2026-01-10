@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/add_product.dart';
+import 'package:pharmacy_restaurant_seller/features/product/presentation/screens/show_product.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/functions/navigate.dart';
@@ -11,7 +13,7 @@ void main()async {
     url: "https://auxddiylonbgayfcgcit.supabase.co",
     anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1eGRkaXlsb25iZ2F5ZmNnY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTk4MzEsImV4cCI6MjA2NzgzNTgzMX0.jFsEvMNT-jtg_uS0HYTfHKhOzhH-4ZeiEicDqEsicA8",
   );
-  runApp(const MyApp());
+  runApp(ProviderScope(child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -20,7 +22,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(360, 690), // الحجم اللي صممت عليه
+      designSize: const Size(360, 690),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -41,12 +43,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-         child: Icon(Icons.add),
-        onPressed: () {
-          NavigateFN(context, () => AddProduct());
-        },
-      ),
+
       appBar: AppBar(
         title: Text(
           'Responsive UI',
@@ -54,13 +51,19 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       body: Center(
-        child: Container(
-          width: 200.w,
-          // العرض يتناسب مع الشاشة
-          height: 100.h,
-          color: Colors.amber,
-          alignment: Alignment.center,
-          child: Text('Hello!', style: TextStyle(fontSize: 24.sp)),
+        child: GestureDetector(
+          onTap: (){
+            NavigateFN(context, () => ShowProduct());
+
+          },
+          child: Container(
+            width: 200.w,
+            // العرض يتناسب مع الشاشة
+            height: 100.h,
+            color: Colors.amber,
+            alignment: Alignment.center,
+            child: Text('Product!', style: TextStyle(fontSize: 24.sp)),
+          ),
         ),
       ),
     );

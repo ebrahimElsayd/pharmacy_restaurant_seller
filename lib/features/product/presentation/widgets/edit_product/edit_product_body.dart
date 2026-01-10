@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pharmacy_restaurant_seller/features/product/data/model/product_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/utils/show_snack_bar.dart';
 import '../../riverpods/product_river_pod/add_product/add_product_river_pod.dart';
 import '../../riverpods/product_river_pod/show_product_river_pod.dart';
-import 'custom_button_push.dart';
-import 'custom_drop_image.dart';
-import 'custom_name_and_des.dart';
-import 'custom_price.dart';
+import '../add_product/custom_button_push.dart';
+import '../add_product/custom_drop_image.dart';
+import '../add_product/custom_name_and_des.dart';
+import '../add_product/custom_price.dart';
 
-class AddProductBody extends ConsumerStatefulWidget {
-  const AddProductBody({super.key});
+class EditProductBody extends ConsumerStatefulWidget {
+  const EditProductBody({super.key, required this.product});
+
+  final ProductModel product;
 
   @override
-  ConsumerState<AddProductBody> createState() => _AddProductBodyState();
+  ConsumerState<EditProductBody> createState() => _EditProductBodyState();
 }
 
-class _AddProductBodyState extends ConsumerState<AddProductBody> {
+class _EditProductBodyState extends ConsumerState<EditProductBody> {
   final TextEditingController title = TextEditingController();
   final TextEditingController description = TextEditingController();
   final TextEditingController amount = TextEditingController();
@@ -42,18 +45,22 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
     ref.read(addProductProvider.notifier).setLoading(true);
 
     try {
-      await _supabase.from('products').insert({
-        "title": title.text.trim(),
-        "description": description.text.trim(),
-        "image": state.imageUrl,
-        "category": state.category,
-        "amount": double.tryParse(amount.text.trim()) ?? 0.0,
-        "discount_amount": double.tryParse(disAmount.text.trim()) ?? 0.0,
-        "status": "Available",
-        "views": 0,
-        "likes": 0,
-        "created_at": DateTime.now().toUtc().toIso8601String(),
-      });
+      await _supabase
+          .from('products')
+          .update({
+            "title": title.text.trim(),
+            "description": description.text.trim(),
+            "image": state.imageUrl,
+            "category": state.category,
+            "amount": double.tryParse(amount.text.trim()) ?? 0.0,
+            "discount_amount": double.tryParse(disAmount.text.trim()) ?? 0.0,
+            "status": "Available",
+            "views": 0,
+            "likes": 0,
+            "created_at": DateTime.now().toUtc().toIso8601String(),
+            "updated_at": DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', widget.product.id);
 
       showSnackBar(context, 'Done');
       ref.invalidate(productsProvider);
@@ -65,6 +72,17 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    title.text = widget.product.title;
+    description.text = widget.product.description;
+    amount.text = widget.product.amount.toString();
+    disAmount.text = widget.product.discountAmount.toString();
+    Future.microtask(() {
+      ref.read(addProductProvider.notifier).setImageUrl(widget.product.image);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +98,7 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
 
             const SizedBox(height: 15),
             CustomDropImage(
+              initialImageUrl: state.imageUrl,
               onImageUploaded: (url) {
                 ref.read(addProductProvider.notifier).setImageUrl(url);
               },
