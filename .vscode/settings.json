@@ -1,0 +1,21 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "": true,
+        "\"files.exclude\": {   \"/*.g.dart\": false }": true,
+        "*.g.dart.false ": true,
+        ".yoyo": true
+    },
+    "CodeGPT.apiKey": "CodeGPT Plus Beta",
+    "Codegeex.CommitMessage.LanguagePreference": "English",
+    "Codegeex.Comment.LanguagePreference": "English",
+    "Codegeex.Chat.LanguagePreference": "English",
+    "Codegeex.GenerationPreference": "automatic",
+    "Codegeex.CommitMessageStyle": "Auto",
+    "Codegeex.SidebarUI.LanguagePreference": "English",
+    "Codegeex.RepoIndex": true
+}
